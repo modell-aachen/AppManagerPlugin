@@ -1,0 +1,19 @@
+%META:TOPICPARENT{name="Plugins"}%
+---+ AppManager Plugin
+
+%SHORTDESCRIPTION%
+
+%AMPAPPLIST%
+
+---++ Installation
+%$INSTALL_INSTRUCTIONS%
+
+---++ Plugin Info
+
+|  Author: | Maik Glatki, Andreas Hennes |
+|  Copyright: | &copy; 2015, Modell Aachen GmbH |
+|  License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
+|  Release: | %$RELEASE% |
+|  Version: | %$VERSION% |
+|  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
+|  Home: | http://modell-aachen.de |
