@@ -23,7 +23,6 @@ sub initPlugin {
     }
 
     Foswiki::Func::registerTagHandler('AMPAPPLIST', \&_AMPAPPLIST);
-
     return 1;
 }
 
@@ -36,69 +35,82 @@ sub _AMPAPPLIST {
 
     my $template = &_buildTable('head');
     my @topicList = Foswiki::Func::getTopicList('System');
-    my $i = 0;
-    my $appsFound = 0;
     my $contribspath = File::Spec->catdir($Foswiki::cfg{ScriptDir} . '/..', 'lib', 'Foswiki', 'Contrib');
 
-    for ($i; $i < (scalar @topicList) ; $i++) {
-        if ($topicList[$i] =~ /AppContrib$/) {
-            $appsFound++;
-            my $description = 'Could not find appconfig.json for AppContrib.';
-            my $actions = '';
-            my $jsonPath = File::Spec->catfile($contribspath, $topicList[$i], 'appconfig.json');
-            my $jsonAppConfig = {};
-
-            if (-e $jsonPath) {
-                open( my $fh, '<', $jsonPath );
-                local $/;
-                my $json_text = <$fh>;
-                Foswiki::Func::writeDebug("Appmanager:" . $json_text);
-                close($fh);
-                $jsonAppConfig = decode_json($json_text);
-
-                if (exists $jsonAppConfig->{description}) {
-                    $description = $jsonAppConfig->{description};
-                } else {
-                    $description = 'Description is not defined';
-                }
-
-                if (exists $jsonAppConfig->{install}) {
-                    $actions = $jsonAppConfig->{install};
-                }
-            }
-            $template .= &_buildTable('content', $topicList[$i], $description, $actions);
+    for my $contrib (@topicList) {
+        if ($contrib =~ /AppContrib$/) {
+            my $conf = _getJSONConfig($contrib);
+            $template .= &_buildTable('content', $contrib, $conf);
         }
     }
     $template .= &_buildTable('foot');
-
-    if ($appsFound == 0) {
-        return 0;
-    }
-
     return $template;
 }
 
 sub _buildTable {
-    if ($_[0] eq 'head') {
-        return '<table><thead><tr><td>Application</td><td>Description</td><td>Actions</td></tr></thead><tbody>';
-    } elsif($_[0] eq 'foot') {
-        return '</tbody></table>';
-    } else {
-        my $state = &_checkInstall($_[3]);
-        return '<tr><td>' . $_[1] . '</td><td>' . $_[2] . '</td><td>' . $state . '</td></tr>'
+    my ($format, $app, $conf) = @_;
+    if ($format eq 'head') {
+        #return '<table><thead><tr><td>Application</td><td>Description</td><td>Actions</td></tr></thead><tbody>';
+        return "| Application | Description | Actions |\n";
+    } elsif ($format eq 'foot') {
+#        return '</tbody></table>';
+        return '';
+    } elsif ($format eq 'content') {
+        my $statusref = _checkInstall($conf);
+        my $status = join(" ", @$statusref);
+        #return '<tr><td>' . $app . '</td><td>' . $conf->{description} . '</td><td>' . $status . '</td></tr>';
+        return '| ' . $app . ' | ' . $conf->{description} . ' | ' . $status . " |\n";
     }
 }
 
+# Check if "install" routines in conf are possible
 sub _checkInstall {
-    my @obj = $_[0];
-    my $i = 0;
-    my $result = '';
-
-    for ($i ; $i < (scalar @obj) ; $i++) {
-        $result .= ' . ';
+    my $conf = shift;
+    my $actions = $conf->{install};
+    # Return notices
+    my $res = [];
+    # Check install actions;
+    for my $action (@$actions) {
+        push @$res, join(", ", keys($action));
+        # push @$res, $action;
     }
+    return $res;
+}
 
-    return (scalar @obj);
+# Check for existing JSON file. Return undef on error.
+sub _getJSONConfig {
+    my $app = shift;
+    my $res = undef;
+    my $jsonPath = File::Spec->catfile($Foswiki::cfg{ScriptDir} . '/..', 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
+    if (-e $jsonPath) {
+        my $fh;
+        unless (open($fh, '<', $jsonPath)) {
+            Foswiki::Func::writeWarning("Could not open file $jsonPath");
+            return undef;
+        } else {
+            # Slurp file, read JSON
+            local $/;
+            my $json_text = <$fh>;
+            close($fh);
+            my $error = 0;
+            my @missing = ();
+            my $jsonAppConfig = decode_json($json_text);
+
+            # Validate JSON structure
+            for my $check (qw(description install appname)) {
+                unless (exists $jsonAppConfig->{description}) {
+                    push @missing, $error;
+                    $error = 1;
+                }
+            }
+            if ($error) {
+                Foswiki::Func::writeWarning("Undefined json attributes for $app: " . join(', ', @missing));
+            } else {
+                $res = $jsonAppConfig;
+            }
+        }
+    }
+    return $res;
 }
 
 1;
