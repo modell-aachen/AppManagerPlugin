@@ -37,11 +37,11 @@ sub _AMPAPPLIST {
 		return 'Not allowed to list installed applications.';
 	}
 	
-	my $template = '<table><thead><tr><td>App</td><td>Description</td><td>Actions</td></tr></thead><tbody>';
+	my $template = &_buildTable('head');
 	my @topicList = Foswiki::Func::getTopicList('System');
 	my $i = 0;
 	my $appsFound = 0;
-	my $contribspath	= File::Spec->catdir($Foswiki::cfg{ScriptDir} . '/..', 'lib', 'Foswiki', 'Contrib');
+	my $contribspath = File::Spec->catdir($Foswiki::cfg{ScriptDir} . '/..', 'lib', 'Foswiki', 'Contrib');
 	
 	for ($i; $i < (scalar @topicList) ; $i++) {
 		if ($topicList[$i] =~ /AppContrib$/) {
@@ -66,19 +66,42 @@ sub _AMPAPPLIST {
 				}
 				
 				if (exists $jsonAppConfig->{install}) {
-					$actions = "install";
+					$actions = $jsonAppConfig->{install};
 				}
 			}
-			$template .= '<tr><td>' . $topicList[$i] . '</td><td>' . $description . '</td><td>' . $actions . '</td></tr>';
+			$template .= &_buildTable('content', $topicList[$i], $description, $actions);
 		}
 	}	
-	$template .= '</tbody></table>';
+	$template .= &_buildTable('foot');
 	
 	if ($appsFound == 0) {
 		return 0;
 	}
 	
 	return $template;
+}
+
+sub _buildTable {
+	if ($_[0] eq 'head') {
+		return '<table><thead><tr><td>Application</td><td>Description</td><td>Actions</td></tr></thead><tbody>';
+	} elsif($_[0] eq 'foot') {
+		return '</tbody></table>';
+	} else {
+		my $state = &_checkInstall($_[3]);
+		return '<tr><td>' . $_[1] . '</td><td>' . $_[2] . '</td><td>' . $state . '</td></tr>'
+	}
+}
+
+sub _checkInstall {
+	my @obj = $_[0];
+	my $i = 0;
+	my $result = '';
+	
+	for ($i ; $i < (scalar @obj) ; $i++) {
+		$result .= ' . ';
+	}
+	
+	return (scalar @obj);
 }
 
 1;
