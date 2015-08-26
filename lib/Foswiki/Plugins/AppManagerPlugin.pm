@@ -23,9 +23,11 @@ sub initPlugin {
     }
 
     Foswiki::Func::registerTagHandler('AMPAPPLIST', \&_AMPAPPLIST);
+    Foswiki::Func::registerRESTHandler('install', \&_RESTinstall);
     return 1;
 }
 
+# List AppManager information for all AppContribs as a table.
 sub _AMPAPPLIST {
     my($session, $params, $topic, $web, $topicObject) = @_;
 
@@ -47,6 +49,38 @@ sub _AMPAPPLIST {
     return $template;
 }
 
+# RestHandler to call _install routine for certain plugin
+sub _RESTinstall {
+    my ($session, $subject, $verb, $response) = @_;
+    my $params = $session->{request}->{param};
+    my $args = {};
+    my $app;
+
+    if (exists $params->{mode}[0]) {
+        $args->{mode} = $params->{mode}[0];
+    } else {
+        $args->{mode} = 'check';
+    }
+    if (exists $params->{installname}[0]) {
+        $args->{installname} = $params->{installname}[0];
+    }
+    if (exists $params->{app}[0]) {
+        $app = $params->{app}[0];
+    } else {
+        $response->status( 400 );
+        return;
+    }
+
+    # Only Admins are allowed to install
+    if ((($args->{mode} eq 'install') or ($args->{mode} eq 'forceinstall')) and (!Foswiki::Func::isAnAdmin())) {
+        $response->status( 403 );
+        return;
+    }
+    my $conf = _getJSONConfig($app);
+    my $statusref = _install($conf, $args);
+    # FIXME reformat response to json here and return
+}
+
 sub _buildTable {
     my ($format, $app, $conf) = @_;
     if ($format eq 'head') {
@@ -56,32 +90,73 @@ sub _buildTable {
 #        return '</tbody></table>';
         return '';
     } elsif ($format eq 'content') {
-        my $statusref = _checkInstall($conf);
-        my $status = join(" ", @$statusref);
+        my $statusref = _install($conf);
+        my $status = join("%BR%", map((@$_)[0] . ': ' . (@$_)[1] ,@$statusref));
         #return '<tr><td>' . $app . '</td><td>' . $conf->{description} . '</td><td>' . $status . '</td></tr>';
         return '| ' . $app . ' | ' . $conf->{description} . ' | ' . $status . " |\n";
     }
 }
 
-# Check if "install" routines in conf are possible
-sub _checkInstall {
-    my $conf = shift;
+# Check if "install" routine in conf are possible, and if mode eq 'install', install.
+sub _install {
+    my ($conf, $args) = @_;
     my $actions = $conf->{install};
     # Return notices
     my $res = [];
-    # Check install actions;
+    # Iterate all install routines;
     for my $action (@$actions) {
-        push @$res, join(", ", keys($action));
-        # push @$res, $action;
+        # We are only interested in the first object, the actual action.
+        my $actA =  (keys $action)[0];
+        if ($actA eq 'move') {
+            # iterate all files to move
+            my @toMove = @{$action->{'move'}};
+            # take first key (should be only key from each object in move action
+            my $note =  "Installation will move files as follows:%BR%";
+            my @warnings = ();
+            # Prepare subsitution strings
+            my $installname = '';
+            if (exists $args->{installname} || exists $conf->{installname}) {
+                my $installname = $args->{installname} || $conf->{installname};
+            }
+            # Iterate over move actions
+            for my $move (@toMove) {
+                my ($src, $tar) = ((keys $move)[0], $move->{(keys $move)[0]});
+                # Substitute place holders in paths
+                if ($installname) {
+                    $src =~ s/%INSTALLNAME%/$installname/g;
+                    $tar =~ s/%INSTALLNAME%/$installname/g;
+                }
+                # Check existance of source and target files
+                $note .= "$src to $tar%BR%";
+                my ($fullsrc, $fulltar) = (_getRootDir() . '/' . $src, _getRootDir() . '/' . $tar);
+                unless ( -e $fullsrc) {
+                    push @warnings, "Source file or directory $src does not exist!";
+                }
+                if ( -e $fulltar) {
+                    push @warnings, "Target file or directory $tar does already exist!";
+                }
+                # FIXME check install here, and install if mode is set accordingly
+            }
+            push @$res, ['info', $note];
+            if (scalar @warnings) {
+                push @$res, map(['warning', $_], @warnings);
+            }
+        }
     }
     return $res;
+}
+
+# Return Foswiki root directory.
+sub _getRootDir {
+    # FIXME there has to be a better solution
+    return $Foswiki::cfg{ScriptDir} . '/..';
 }
 
 # Check for existing JSON file. Return undef on error.
 sub _getJSONConfig {
     my $app = shift;
     my $res = undef;
-    my $jsonPath = File::Spec->catfile($Foswiki::cfg{ScriptDir} . '/..', 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
+    my $jsonPath = File::Spec->catfile(_getRootDir(), 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
     if (-e $jsonPath) {
         my $fh;
         unless (open($fh, '<', $jsonPath)) {
