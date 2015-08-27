@@ -3,9 +3,16 @@ package Foswiki::Plugins::AppManagerPlugin;
 
 use strict;
 use warnings;
+
+# Foswiki modules
 use Foswiki::Func    ();
 use Foswiki::Plugins ();
+
+# Core modules
 use File::Spec;
+use File::Copy;
+
+# Extra modules
 use JSON;
 
 our $VERSION = '0.1';
@@ -77,8 +84,7 @@ sub _RESTinstall {
         return;
     }
     my $conf = _getJSONConfig($app);
-    my $statusref = _install($conf, $args);
-    # FIXME reformat response to json here and return
+    return encode_json _install($conf, $args);
 }
 
 sub _buildTable {
@@ -92,8 +98,15 @@ sub _buildTable {
     } elsif ($format eq 'content') {
         my $statusref = _install($conf);
         my $status = join("%BR%", map((@$_)[0] . ': ' . (@$_)[1] ,@$statusref));
+        # Check for non info notices
+        my $button = '';
+        my $check = {};
+        map($check->{(@$_)[0]} = (@$_)[1],@$statusref);
+        if (exists $check->{can_install} and $check->{can_install}) {
+            $button = '%BR%%BUTTON{"Install" href="%SCRIPTURLPATH{"rest"}%/AppManagerPlugin/install?mode=install;app=' . $app . '"}%';
+        }
         #return '<tr><td>' . $app . '</td><td>' . $conf->{description} . '</td><td>' . $status . '</td></tr>';
-        return '| ' . $app . ' | ' . $conf->{description} . ' | ' . $status . " |\n";
+        return '| ' . $app . ' | ' . $conf->{description} . ' | ' . $status . $button . " |\n";
     }
 }
 
@@ -101,6 +114,10 @@ sub _buildTable {
 sub _install {
     my ($conf, $args) = @_;
     my $actions = $conf->{install};
+    my $installname = '';
+    if (exists $args->{installname} || exists $conf->{installname}) {
+        $installname = $args->{installname} || $conf->{installname};
+    }
     # Return notices
     my $res = [];
     # Iterate all install routines;
@@ -114,32 +131,41 @@ sub _install {
             my $note =  "Installation will move files as follows:%BR%";
             my @warnings = ();
             # Prepare subsitution strings
-            my $installname = '';
-            if (exists $args->{installname} || exists $conf->{installname}) {
-                my $installname = $args->{installname} || $conf->{installname};
-            }
             # Iterate over move actions
-            for my $move (@toMove) {
-                my ($src, $tar) = ((keys $move)[0], $move->{(keys $move)[0]});
-                # Substitute place holders in paths
-                if ($installname) {
-                    $src =~ s/%INSTALLNAME%/$installname/g;
-                    $tar =~ s/%INSTALLNAME%/$installname/g;
+            my @passes = ('check');
+            if (($args->{mode} eq 'install') or ($args->{mode} eq 'forceinstall')) {
+                push @passes, $args->{mode};
+            }
+            chdir _getRootDir();
+            for my $pass (@passes) {
+                # FIXME this duplication smells
+                for my $move (@toMove) {
+                    my ($src, $tar) = ((keys $move)[0], $move->{(keys $move)[0]});
+                    # Substitute place holders in paths
+                    if ($installname) {
+                        $src =~ s/%INSTALLNAME%/$installname/g;
+                        $tar =~ s/%INSTALLNAME%/$installname/g;
+                    }
+                    # Check existance of source and target files
+                    if ($pass eq 'check') {
+                        $note .= "$src to $tar%BR%";
+                        unless ( -e $src) {
+                            push @warnings, "Source file or directory $src does not exist!";
+                        }
+                        if ( -e $tar) {
+                            push @warnings, "Target file or directory $tar does already exist!";
+                        }
+                    } elsif ((($pass eq 'install') and (! scalar @warnings)) or ($pass eq 'forceinstall')) {
+                        Foswiki::Func::writeWarning("move $src to $tar.");
+                        File::Copy::move($src, $tar);
+                    }
                 }
-                # Check existance of source and target files
-                $note .= "$src to $tar%BR%";
-                my ($fullsrc, $fulltar) = (_getRootDir() . '/' . $src, _getRootDir() . '/' . $tar);
-                unless ( -e $fullsrc) {
-                    push @warnings, "Source file or directory $src does not exist!";
-                }
-                if ( -e $fulltar) {
-                    push @warnings, "Target file or directory $tar does already exist!";
-                }
-                # FIXME check install here, and install if mode is set accordingly
             }
             push @$res, ['info', $note];
             if (scalar @warnings) {
                 push @$res, map(['warning', $_], @warnings);
+            } else {
+                push @$res, ['can_install', '1'];
             }
         }
     }
@@ -169,6 +195,7 @@ sub _getJSONConfig {
             close($fh);
             my $error = 0;
             my @missing = ();
+            $json_text = Foswiki::Sandbox::untaintUnchecked($json_text);
             my $jsonAppConfig = decode_json($json_text);
 
             # Validate JSON structure
