@@ -175,7 +175,7 @@ sub _install {
 # Return Foswiki root directory.
 sub _getRootDir {
     # FIXME there has to be a better solution
-    return $Foswiki::cfg{ScriptDir} . '/..';
+    return $ENV{'DOCUMENT_ROOT'};
 }
 
 # Check for existing JSON file. Return undef on error.
