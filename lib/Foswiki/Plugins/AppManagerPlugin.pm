@@ -9,6 +9,7 @@ use Foswiki::Func    ();
 use Foswiki::Plugins ();
 
 # Core modules
+use Carp;
 use File::Spec;
 use File::Copy;
 
@@ -57,6 +58,9 @@ sub _AMPAPPLIST {
 }
 
 # RestHandler to call _install routine for certain plugin
+# mode: check|install|forceinstall
+# app: appname
+# installname: optional name to install
 sub _RESTinstall {
     my ($session, $subject, $verb, $response) = @_;
     my $params = $session->{request}->{param};
@@ -84,7 +88,7 @@ sub _RESTinstall {
         return;
     }
     my $conf = _getJSONConfig($app);
-    return encode_json _install($conf, $args);
+    return encode_json(_install($conf, $args));
 }
 
 sub _buildTable {
@@ -96,27 +100,42 @@ sub _buildTable {
 #        return '</tbody></table>';
         return '';
     } elsif ($format eq 'content') {
-        my $statusref = _install($conf);
-        my $status = join("%BR%", map((@$_)[0] . ': ' . (@$_)[1] ,@$statusref));
-        # Check for non info notices
-        my $button = '';
-        my $check = {};
-        map($check->{(@$_)[0]} = (@$_)[1],@$statusref);
-        if (exists $check->{can_install} and $check->{can_install}) {
-            $button = '%BR%%BUTTON{"Install" href="%SCRIPTURLPATH{"rest"}%/AppManagerPlugin/install?mode=install;app=' . $app . '"}%';
-        }
+        my $status = '';
+        my $description = '';
+        if (defined $conf) {
+            my $statusref = _install($conf);
+
+            # Collate informational notices
+            $status = join("%BR%", map((@$_)[0] . ': ' . (@$_)[1], @$statusref));
+            $description = $conf->{description};
+
+            # Check for non info notices
+            my $check = {};
+            map($check->{(@$_)[0]} = (@$_)[1], @$statusref);
+            if (exists $check->{can_install} and $check->{can_install}) {
+                $status .= '%BR%%BUTTON{"Install" href="%SCRIPTURLPATH{"rest"}%/AppManagerPlugin/install?mode=install;app=' . $app . '"}%';
+            }        }
         #return '<tr><td>' . $app . '</td><td>' . $conf->{description} . '</td><td>' . $status . '</td></tr>';
-        return '| ' . $app . ' | ' . $conf->{description} . ' | ' . $status . $button . " |\n";
+        return '| ' . $app . ' | ' . $description . ' | ' . $status . " |\n";
     }
 }
 
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
+# conf parameter is mandatory,
+# args parameter is optional
 sub _install {
-    my ($conf, $args) = @_;
+    my ( $conf, $args, @bad ) = @_;
+    die "Extra parameters in " . (caller(0))[3] if @bad;
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ( $conf);
+
     my $actions = $conf->{install};
     my $installname = '';
+    my $mode = 'check';
     if (exists $args->{installname} || exists $conf->{installname}) {
         $installname = $args->{installname} || $conf->{installname};
+    }
+    if (exists $args->{mode}) {
+        $mode = $args->{mode};
     }
     # Return notices
     my $res = [];
@@ -125,16 +144,15 @@ sub _install {
         # We are only interested in the first object, the actual action.
         my $actA =  (keys $action)[0];
         if ($actA eq 'move') {
-            # iterate all files to move
+            # Iterate all files to move
             my @toMove = @{$action->{'move'}};
-            # take first key (should be only key from each object in move action
+            # Take first key (should be only key from each object in move action
             my $note =  "Installation will move files as follows:%BR%";
             my @warnings = ();
-            # Prepare subsitution strings
             # Iterate over move actions
             my @passes = ('check');
-            if (($args->{mode} eq 'install') or ($args->{mode} eq 'forceinstall')) {
-                push @passes, $args->{mode};
+            if (($mode eq 'install') or ($mode eq 'forceinstall')) {
+                push @passes, $mode;
             }
             chdir _getRootDir();
             for my $pass (@passes) {
@@ -164,7 +182,7 @@ sub _install {
             push @$res, ['info', $note];
             if (scalar @warnings) {
                 push @$res, map(['warning', $_], @warnings);
-            } else {
+            } elsif ($mode ne 'install') {
                 push @$res, ['can_install', '1'];
             }
         }
@@ -180,7 +198,10 @@ sub _getRootDir {
 
 # Check for existing JSON file. Return undef on error.
 sub _getJSONConfig {
-    my $app = shift;
+    my ( $app, @bad ) = @_;
+    die "Extra parameters in " . (caller(0))[3] if @bad;
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ( $app );
+
     my $res = undef;
     my $jsonPath = File::Spec->catfile(_getRootDir(), 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
     if (-e $jsonPath) {
@@ -201,7 +222,7 @@ sub _getJSONConfig {
             # Validate JSON structure
             for my $check (qw(description install appname)) {
                 unless (exists $jsonAppConfig->{description}) {
-                    push @missing, $error;
+                    push @missing, $check;
                     $error = 1;
                 }
             }
