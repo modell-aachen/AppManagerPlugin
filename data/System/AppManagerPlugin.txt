@@ -3,6 +3,9 @@
 
 %SHORTDESCRIPTION%
 
+<script type='text/javascript' src='%PUBURLPATH%/System/AppManager/appmanager.js'></script>
+<link rel='stylesheet' href='%PUBURLPATH%/System/AppManager/appmanager.css' />
+
 %AMPAPPLIST%
 
 ---++ Installation
