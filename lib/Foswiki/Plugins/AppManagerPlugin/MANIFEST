@@ -1,3 +1,6 @@
 !noci
 data/System/AppManagerPlugin.txt 0644
-lib/Foswiki/Plugins/AppManagerPlugin.pm 0666
+data/System/AppManagerTemplates.txt 0644
+lib/Foswiki/Plugins/AppManagerPlugin.pm 0644
+pub/System/AppManager/appmanager.js 0644
+pub/System/AppManager/appmanager.css 0644

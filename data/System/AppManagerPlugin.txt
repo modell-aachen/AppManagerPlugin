@@ -1,12 +1,17 @@
+%META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
 ---+ AppManager Plugin
 
 %SHORTDESCRIPTION%
 
+<script type='text/javascript'>
+	window.appDataObj = %AMPAPPLIST%;
+</script>
+
 <script type='text/javascript' src='%PUBURLPATH%/System/AppManager/appmanager.js'></script>
 <link rel='stylesheet' href='%PUBURLPATH%/System/AppManager/appmanager.css' />
 
-%AMPAPPLIST%
+<div id="mainContainer"></div>
 
 ---++ Installation
 %$INSTALL_INSTRUCTIONS%
@@ -20,3 +25,5 @@
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
 |  Home: | http://modell-aachen.de |
+%META:PREFERENCE{name="NO_MODAC_HEAD" title="NO_MODAC_HEAD" type="Set" value="on"}%
+%META:PREFERENCE{name="ALLOWTOPICVIEW" title="ALLOWTOPICVIEW" type="Set" value="AdminGroup"}%
