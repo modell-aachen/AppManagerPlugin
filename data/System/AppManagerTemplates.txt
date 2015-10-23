@@ -10,10 +10,28 @@
 	<div class="singleAppDetails">
 		<div class="singleAppHeader">Details</div>
 	</div>
+	<div class="singleAppActions">
+		<div class="singleAppHeader">Actions</div>
+		<div class="singleAppActionsContent">
+			<div class="singleAppActionsContentSelect" replaceVal="actionsSelect"></div>
+			<div class="singleAppActionsContentDesc" replaceVal="actionsDescription"></div>
+			<div class="clear"></div>
+		</div>
+		<div class="singleAppActionsNoContent">No Actions Available</div>
+	</div>
 	<div class="clear"></div>
 	<div class="singleAppCollapse"></div>
 </div>
-%ENDSECTION{"name"}%
+%ENDSECTION{"singleAppContainer"}%
+
+%STARTSECTION{"singleAppActions"}%
+<div class="singleAppSelectContainer">
+	<select class="singleAppActionSelect"></select>
+</div>
+<div class="singleAppSubmitContainer">
+	<button type="button" class="singleAppActionSubmit">Go</button>
+</div>
+%ENDSECTION{"singleAppActions"}%
 
 %META:PREFERENCE{name="NO_MODAC_HEAD" title="NO_MODAC_HEAD" type="Set" value="on"}%
 %META:PREFERENCE{name="ALLOWTOPICVIEW" title="ALLOWTOPICVIEW" type="Set" value="AdminGroup"}%
