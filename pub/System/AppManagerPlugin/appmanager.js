@@ -63,10 +63,10 @@
 
 		/***** Loads all necessary Templates for the AppManager *****/
 		loadTemplates : function() {
-			jQuery.get("AppManagerTemplates?contenttype=text/plain&skin=text&section=singleAppContainer", function(data, textStatus, XMLHttpRequest) {
+			jQuery.get("AppManagerPluginTemplates?contenttype=text/plain&skin=text&section=singleAppContainer", function(data, textStatus, XMLHttpRequest) {
 				appManager.templates.singleAppContainerTmpl = data;
 			});
-			jQuery.get("AppManagerTemplates?contenttype=text/plain&skin=text&section=singleAppActions", function(data, textStatus, XMLHttpRequest) {
+			jQuery.get("AppManagerPluginTemplates?contenttype=text/plain&skin=text&section=singleAppActions", function(data, textStatus, XMLHttpRequest) {
 				appManager.templates.singleAppActionsTmpl = data;
 			});
 		},
