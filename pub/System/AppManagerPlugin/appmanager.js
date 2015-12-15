@@ -14,13 +14,12 @@
 				});
 			}
 		}, 30);
-	});	
+	});
 
-	/***** AppManager Main Object *****/
+	/***** AppManager main object *****/
 	var appManager = {
-
 		/*********************************/
-		/***** AppManager Attributes *****/
+		/***** AppManager attributes *****/
 		/*********************************/
 		_dataObj 					: {},
 		topParentElem 				: {},
@@ -30,7 +29,7 @@
 		},
 
 		/******************************/
-		/***** AppManager Methods *****/
+		/***** AppManager methods *****/
 		/******************************/
 
 		config: function() {
@@ -38,7 +37,7 @@
 			this.topParentElem = jQuery('#mainContainer');
 		},
 
-		/***** Create a Container for a single App, displyed on the System Page *****/
+		/***** Create a container for a single application, displayed on the system topic *****/
 		createSingleAppContainer : function(template, obj) {
 			jQuery(this.topParentElem).append(template);
 			jQuery('.singleAppContainer:last').find('[replaceVal="appname"]').text(obj.appname);
@@ -61,7 +60,7 @@
 			}
 		},
 
-		/***** Loads all necessary Templates for the AppManager *****/
+		/***** Loads all necessary templates *****/
 		loadTemplates : function() {
 			jQuery.get("AppManagerPluginTemplates?contenttype=text/plain&skin=text&section=singleAppContainer", function(data, textStatus, XMLHttpRequest) {
 				appManager.templates.singleAppContainerTmpl = data;
@@ -71,12 +70,12 @@
 			});
 		},
 
-		/***** Set Value for Attribute _dataObj *****/
+		/***** Set value for attribute _dataObj *****/
 		setDataObj : function(obj) {
 			this._dataObj = obj;
 		},
 
-		/***** Get Value for Attribute _dataObj *****/
+		/***** Get value for attribute _dataObj *****/
 		getDataObj : function() {
 			return this._dataObj;
 		}
