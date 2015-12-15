@@ -30,29 +30,67 @@ sub initPlugin {
         return 0;
     }
 
-    Foswiki::Func::registerTagHandler('AMPAPPLIST', \&_AMPAPPLIST);
-    Foswiki::Func::registerRESTHandler('install', \&_RESTinstall);
+    my %restopts = (authenticate => 1, validate => 0, http_allow => 'POST');
+    Foswiki::Func::registerRESTHandler('install', \&_RESTinstall, %restopts);
+
+    $restopts{http_allow} = 'GET';
+    Foswiki::Func::registerRESTHandler('applist',   \&_RESTapplist,   %restopts);
+    Foswiki::Func::registerRESTHandler('appdetail', \&_RESTappdetail, %restopts);
     return 1;
 }
 
-# List AppManager information for all AppContribs as a table.
-sub _AMPAPPLIST {
-    my($session, $params, $topic, $web, $topicObject) = @_;
+# Returns application details
+sub _RESTappdetail {
+    my($session, $subject, $verb, $response) = @_;
+    my $q = $session->{request};
+
+    my $app = $q->param('name');
+    unless ($app) {
+        return encode_json({'error' => 'Parameter \'name\' is mandatory'});
+    }
+    my $conf = _getJSONConfig($app);
+    if ($conf) {
+        my $res = {
+            'description' => ($conf->{description}),
+            'status' => 'Placeholder',
+            'actions' => '',
+        };
+        # Autoreplace %SHORTDESCRIPTION%
+        if ($res->{description} eq '%SHORTDESCRIPTION%') {
+            no strict 'refs';
+            my $ref = sprintf('Foswiki::Contrib::%s::SHORTDESCRIPTION', $app);
+            eval("require Foswiki::Contrib::$app;");
+            $res->{description} = ${$ref};
+            print STDERR ${$ref};
+        }
+
+        # Collect actions
+        my $actions = {};
+        if ($conf->{'install'}) { $actions->{install} = 'Install the application';}
+        $res->{actions} = $actions;
+        return encode_json($res);
+    } else {
+        return encode_json({'error' => 'Not an application or application unmanaged'});
+    }
+}
+
+# Returns list of managed and unmanaged applications.
+sub _RESTapplist {
+    my($session, $subject, $verb, $response) = @_;
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
-        return 'Not allowed to list installed applications.';
+        return encode_json({'error' => 'Only Admins are allowed to list installed applications.'});
     }
 
-    my @topicList = Foswiki::Func::getTopicList('System');
-
-    #Foswiki::Func::writeWarning($contribspath);
+    my @topicList = grep {/AppContrib$/} Foswiki::Func::getTopicList('System');
 
     my $applist = {};
-    for my $contrib (@topicList) {
-        my $conf = _getJSONConfig($contrib);
-        if (($contrib =~ /AppContrib$/) && ($conf))  {
-            $applist->{$contrib} = $conf;
+    for my $app (@topicList) {
+        if (_getJSONConfig($app)) {
+            $applist->{$app} = 'managed'; }
+        else {
+            $applist->{$app} = 'unmanaged';
         }
     }
     return encode_json($applist);
