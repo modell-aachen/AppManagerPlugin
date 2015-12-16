@@ -62,7 +62,6 @@ sub _appdetail  {
             my $ref = sprintf('Foswiki::Contrib::%s::SHORTDESCRIPTION', $app);
             eval("require Foswiki::Contrib::$app;");
             $res->{description} = ${$ref};
-            print STDERR ${$ref};
         }
 
         # Collect actions
