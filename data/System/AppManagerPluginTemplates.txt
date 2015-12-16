@@ -1,0 +1,37 @@
+%META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591333" format="1.1" version="2"}%
+
+%STARTSECTION{"singleAppContainer"}%
+<div class="singleAppContainer">
+	<div replaceVal="appname" class="singleAppName"></div>
+	<div class="singleAppDescription">
+		<div class="singleAppHeader">Beschreibung</div>
+		<div replaceVal="description" class="singleAppDescContent"></div>
+	</div>
+	<div class="singleAppDetails">
+		<div class="singleAppHeader">Details</div>
+	</div>
+	<div class="singleAppActions">
+		<div class="singleAppHeader">Actions</div>
+		<div class="singleAppActionsContent">
+			<div class="singleAppActionsContentSelect" replaceVal="actionsSelect"></div>
+			<div class="singleAppActionsContentDesc" replaceVal="actionsDescription"></div>
+			<div class="clear"></div>
+		</div>
+		<div class="singleAppActionsNoContent">No Actions Available</div>
+	</div>
+	<div class="clear"></div>
+	<div class="singleAppCollapse"></div>
+</div>
+%ENDSECTION{"singleAppContainer"}%
+
+%STARTSECTION{"singleAppActions"}%
+<div class="singleAppSelectContainer">
+	<select class="singleAppActionSelect"></select>
+</div>
+<div class="singleAppSubmitContainer">
+	<button type="button" class="singleAppActionSubmit">Go</button>
+</div>
+%ENDSECTION{"singleAppActions"}%
+
+%META:PREFERENCE{name="NO_MODAC_HEAD" title="NO_MODAC_HEAD" type="Set" value="on"}%
+%META:PREFERENCE{name="ALLOWTOPICVIEW" title="ALLOWTOPICVIEW" type="Set" value="AdminGroup"}%
