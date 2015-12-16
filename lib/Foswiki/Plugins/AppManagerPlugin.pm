@@ -176,7 +176,7 @@ sub _install {
         # Iterate all install routines;
         for my $action (@$actions) {
             # We are only interested in the first object, the actual action.
-            my $actA =  (keys $action)[0];
+            my $actA =  (keys %$action)[0];
             if ($actA eq 'move') {
                 # Iterate all files to move
                 my @toMove = @{$action->{'move'}};
@@ -192,7 +192,7 @@ sub _install {
                 for my $pass (@passes) {
                     # FIXME this duplication smells
                     for my $move (@toMove) {
-                        my ($src, $tar) = ((keys $move)[0], $move->{(keys $move)[0]});
+                        my ($src, $tar) = ((keys %$move)[0], $move->{(keys %$move)[0]});
                         # Substitute place holders in paths
                         if ($installname) {
                             $src =~ s/%INSTALLNAME%/$installname/g;
@@ -241,7 +241,7 @@ sub _uglytable {
             $res .= $detail->{description};
             $res .= '</td>';
             $res .= '<td>';
-            for my $action (keys $detail->{actions}) {
+            for my $action (keys %{$detail->{actions}}) {
                 $res .= '%BUTTON{"Action: ' . $action .'" href="%SCRIPTURLPATH{"rest"}%/AppManagerPlugin/appaction?name=' . $name . '&action=' . $action . '"}%';
             }
             $res .= '</td>';
