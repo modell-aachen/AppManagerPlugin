@@ -1,6 +1,5 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
----+ AppManagerPlugin
 
 %SHORTDESCRIPTION%
 
@@ -13,10 +12,37 @@
 
 <div id="mainContainer"></div>
 
-
+Placeholder for actual GUI:
 %AMPUGLY%
----++ Installation
-%$INSTALL_INSTRUCTIONS%
+---++ API
+
+---+++ _appconfig.json_
+Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Foswiki/Contrib/MyAppContrib/appconfig.json_):
+
+   * _appname_: The application name. Currently not used.
+   * _description_: The application description. You may enter <nop>%SHORTDESCRIPTION%</nop> here, it will be replaced by the AppManagerPlugin.
+   * _installname_: The default installation web. Will be used to replace <nop>%INSTALLNAME% later.
+
+<pre>
+{
+    "appname": "MyAppContrib",
+    "description": "<nop>%SHORTDESCRIPTION%</nop>",
+    "installname": "MyApp",
+    "install": [
+        {
+            "move": [
+                {"data/_apps/MyApp": "data/%INSTALLNAME%"}
+            ]
+        }
+    ]
+}
+</pre>
+
+---+++ Action: install
+The install field contains all information for the execution of the move action. The move command in the insta
+   * _move_: Ordered list of key-value pairs
+      * key: source file or directory.
+      * value: target file or directory.
 
 ---++ Plugin Info
 
@@ -26,8 +52,8 @@
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
+|  0.1 | First functional prototype. |
 |  Home: | http://modell-aachen.de |
-%META:PREFERENCE{name="NO_MODAC_HEAD" title="NO_MODAC_HEAD" type="Set" value="on"}%
-%META:PREFERENCE{name="ALLOWTOPICVIEW" title="ALLOWTOPICVIEW" type="Set" value="AdminGroup"}%
 %META:FILEATTACHMENT{name="appmanager.js" attachment="appmanager.js" attr="" comment="" date="1450175796" path="appmanager.js" size="337737" user="BaseUserMapping_333" version="1"}%
 %META:FILEATTACHMENT{name="appmanager.css" attachment="appmanager.css" attr="" comment="" date="1450175796" path="appmanager.css" size="337737" user="BaseUserMapping_333" version="1"}%
+
