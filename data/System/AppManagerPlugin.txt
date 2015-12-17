@@ -38,11 +38,55 @@ Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Fosw
 }
 </pre>
 
----+++ Action: install
+---++++ Action: install
 The install field contains all information for the execution of the move action. The move command in the insta
    * _move_: Ordered list of key-value pairs
       * key: source file or directory.
       * value: target file or directory.
+
+---+++ REST handlers
+<table class="Modac_Standard">
+	<thead>
+		<tr>
+			<th>Handler</th>
+			<th>Example success message</th>
+			<th>Example failure message</th>
+		</tr>
+	</thead>
+	<tr>
+		<td>
+			<pre>/bin/rest/AppManagerPlugin/applist</pre>
+		</td>
+		<td>
+			<pre>{"InvestmentAppContrib": "managed", "RiskAppContrib": "unmanaged"}</pre>
+		</td>
+		<td>
+			<pre>{"error" :"access to REST handler not allowed"}</pre>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<pre>/bin/rest/AppManagerPlugin/appdetail?name=InvestmentAppContrib</pre>
+		</td>
+		<td>
+			<pre>{"description": "Whatever", "status": "Ist sauber installiert", "actions:" {"install": "freitext"}}</pre>
+		</td>
+		<td>
+			<pre>{"error" :"access to REST handler not allowed"}</pre>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<pre>/bin/rest/AppManagerPlugin/appaction?name=InvestmentAppContrib&action=install</pre>
+		</td>
+		<td>
+			Currently not defined
+		</td>
+		<td>
+			<pre>{"error" :"action not available for this application."}</pre>
+		</td>
+	</tr>
+</table>
 
 ---++ Plugin Info
 
