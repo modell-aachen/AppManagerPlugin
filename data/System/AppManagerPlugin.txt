@@ -1,0 +1,103 @@
+%META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
+%META:TOPICPARENT{name="Plugins"}%
+
+%SHORTDESCRIPTION%
+
+<script type='text/javascript'>
+    window.appDataObj = %AMPAPPLIST%;
+</script>
+
+<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>
+<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />
+
+<div id="mainContainer"></div>
+
+Placeholder for actual GUI:
+%AMPUGLY%
+---++ API
+
+---+++ _appconfig.json_
+Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Foswiki/Contrib/MyAppContrib/appconfig.json_):
+
+   * _appname_: The application name. Currently not used.
+   * _description_: The application description. You may enter <nop>%SHORTDESCRIPTION%</nop> here, it will be replaced by the AppManagerPlugin.
+   * _installname_: The default installation web. Will be used to replace <nop>%INSTALLNAME% later.
+
+<pre>
+{
+    "appname": "MyAppContrib",
+    "description": "<nop>%SHORTDESCRIPTION%</nop>",
+    "installname": "MyApp",
+    "install": [
+        {
+            "move": [
+                {"data/_apps/MyApp": "data/%INSTALLNAME%"}
+            ]
+        }
+    ]
+}
+</pre>
+
+---++++ Action: install
+The install field contains all information for the execution of the move action. The move command in the insta
+   * _move_: Ordered list of key-value pairs
+      * key: source file or directory.
+      * value: target file or directory.
+
+---+++ REST handlers
+<table class="Modac_Standard">
+	<thead>
+		<tr>
+			<th>Handler</th>
+			<th>Example success message</th>
+			<th>Example failure message</th>
+		</tr>
+	</thead>
+	<tr>
+		<td>
+			<pre>/bin/rest/AppManagerPlugin/applist</pre>
+		</td>
+		<td>
+			<pre>{"InvestmentAppContrib": "managed", "RiskAppContrib": "unmanaged"}</pre>
+		</td>
+		<td>
+			<pre>{"error" :"access to REST handler not allowed"}</pre>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<pre>/bin/rest/AppManagerPlugin/appdetail?name=InvestmentAppContrib</pre>
+		</td>
+		<td>
+			<pre>{"description": "Whatever", "status": "Ist sauber installiert", "actions:" {"install": "freitext"}}</pre>
+		</td>
+		<td>
+			<pre>{"error" :"access to REST handler not allowed"}</pre>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<pre>/bin/rest/AppManagerPlugin/appaction?name=InvestmentAppContrib&action=install</pre>
+		</td>
+		<td>
+			Currently not defined
+		</td>
+		<td>
+			<pre>{"error" :"action not available for this application."}</pre>
+		</td>
+	</tr>
+</table>
+
+---++ Plugin Info
+
+|  Author: | Maik Glatki, Andreas Hennes |
+|  Copyright: | &copy; 2015, Modell Aachen GmbH |
+|  License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
+|  Release: | %$RELEASE% |
+|  Version: | %$VERSION% |
+|  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
+|  0.1 | First functional prototype. |
+|  Home: | http://modell-aachen.de |
+%META:FILEATTACHMENT{name="appmanager.js" attachment="appmanager.js" attr="" comment="" date="1450175796" path="appmanager.js" size="337737" user="BaseUserMapping_333" version="1"}%
+%META:FILEATTACHMENT{name="appmanager.css" attachment="appmanager.css" attr="" comment="" date="1450175796" path="appmanager.css" size="337737" user="BaseUserMapping_333" version="1"}%
+
