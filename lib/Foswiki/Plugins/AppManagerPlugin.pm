@@ -66,7 +66,7 @@ sub _appdetail  {
 
         # Collect actions
         my $actions = {};
-        if ($conf->{'install'}) { $actions->{install} = 'Install the application';}
+        if ($conf->{'install'}) { $actions->{install} = {"description" => "Install the application", "parameters" => {"placeholder" => { "type" => "text"}}}; }
         $res->{actions} = $actions;
         return $res;
     } else {
