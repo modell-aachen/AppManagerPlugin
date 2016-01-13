@@ -79,13 +79,20 @@ The install field contains all information for the execution of the move action.
 		<td>
 			<pre>/bin/rest/AppManagerPlugin/appaction?name=InvestmentAppContrib&action=install</pre>
 		</td>
-		<td>
-			Currently not defined
-		</td>
-		<td>
-			<pre>{"error" :"action not available for this application."}</pre>
-		</td>
-	</tr>
+<td colspan="2">
+<pre>{
+    "result": $result,
+    "info": {
+        "type" : $type,
+        "data" : $data
+    }
+}</pre>
+   * ==$result==: ="ok"|"error"|"unknown"=
+   * ==$type==: ="text"=
+   * ==$data==: Depending on =$type=.
+      * type: "text", "JSON text meant to be displayed raw.
+</td>
+</tr>
 </table>
 
 ---++ Plugin Info
