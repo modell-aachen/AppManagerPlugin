@@ -69,7 +69,15 @@ The install field contains all information for the execution of the move action.
 			<pre>/bin/rest/AppManagerPlugin/appdetail?name=InvestmentAppContrib</pre>
 		</td>
 		<td>
-			<pre>{"description": "Whatever", "status": "Ist sauber installiert", "actions:" {"install": "freitext"}}</pre>
+<pre>{
+  "description": "Whatever",
+  "status": "Ist sauber installiert",
+  "actions:" {
+    "install": {
+      "description": "freitext",
+      "parameters": {"param1": {"type" "text", "default"="foo"}
+  }
+}</pre>
 		</td>
 		<td>
 			<pre>{"error" :"access to REST handler not allowed"}</pre>
