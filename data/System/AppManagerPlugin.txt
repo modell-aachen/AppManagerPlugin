@@ -1,10 +1,8 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
 
-
 <script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>
 <link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />
-
 <div id="mainContainer">
 <div id="appMainContainer">
 <div id="managedAppsHeader">Managed Apps</div>
@@ -13,24 +11,16 @@
 <div id="unmanagedAppsContainer"></div>
 </div>
 <div id="appConfigContainer">
-<div id="appConfigDescriptionHeader">Applikationsbeschreibung</div>
+<div id="appConfigDescriptionHeader">%MAKETEXT{Description}%</div>
 <div id="appConfigDescriptionContent"></div>
-<div id="appConfigOptionsHeader">Optionen/Parameter</div>
+<div id="appConfigActionsHeader">%MAKETEXT{Actions}%</div>
+<div id="appConfigActionsContent"></div>
 </div>
 <div class="clear"></div>
 </div>
+<br>
 
-
-
-<br><br><br><br><br><br><br><br>
-
-
-
-
-<!--
-
-
----++ API
+---++ Documentation
 
 ---+++ _appconfig.json_
 Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Foswiki/Contrib/MyAppContrib/appconfig.json_):
@@ -45,14 +35,18 @@ Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Fosw
     "description": "<nop>%SHORTDESCRIPTION%</nop>",
     "installname": "MyApp",
     "install": [
-        {
-            "move": [
-                {"data/_apps/MyApp": "data/%INSTALLNAME%"}
+            "move", "%DATADIR%data/_apps/MyApp", "%DATADIR%/%INSTALLNAME%"
             ]
         }
     ]
 }
 </pre>
+
+Available variables:
+   * =%SHORTDESCRIPTION%=: Will be replaced with information from Contrib .pm file.
+   * =%INSTALLNAME%=: Will be replaced with application installname parameter or default.
+   * =%DATADIR%=: Will be replaced with, Foswiki {DataDir}.
+   * =%PUBDIR%=: Will be replaced with, Foswiki {PubDir}.
 
 ---++++ Action: install
 The install field contains all information for the execution of the move action. The move command in the insta
@@ -119,8 +113,6 @@ The install field contains all information for the execution of the move action.
 </tr>
 </table>
 
--->
-
 ---++ Plugin Info
 
 |  Author: | Maik Glatki, Andreas Hennes |
@@ -129,8 +121,8 @@ The install field contains all information for the execution of the move action.
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
+|  0.2 | Changed appconfig.json install directives. Added appaction "diff". |
 |  0.1 | First functional prototype. |
 |  Home: | http://modell-aachen.de |
 %META:FILEATTACHMENT{name="appmanager.js" attachment="appmanager.js" attr="" comment="" date="1450175796" path="appmanager.js" size="337737" user="BaseUserMapping_333" version="1"}%
 %META:FILEATTACHMENT{name="appmanager.css" attachment="appmanager.css" attr="" comment="" date="1450175796" path="appmanager.css" size="337737" user="BaseUserMapping_333" version="1"}%
-
