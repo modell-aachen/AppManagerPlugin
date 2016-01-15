@@ -19,7 +19,6 @@
         $.get(p.SCRIPTURL + "/rest/" + p.SCRIPTSUFFIX + "AppManagerPlugin/appdetail", {name: $(this).attr('id')}, function(data, textStatus, XMLHttpRequest) {
           var appInformation = $.parseJSON(data);
           $('#appConfigDescriptionContent').empty().append(appInformation.description);
-          console.log(appInformation)
           var $select = $('<select></select>');
           for (var action in appInformation.actions) {
             if (typeof appInformation.actions[action] === "object") {
@@ -27,7 +26,7 @@
             }
           }
           $('#appConfigActionsContent').empty().append($select);
-          $('<a href="#"').appendTo("#appConfigActionsContent").on('click', function() {
+          $('<a href="#">Go</a>').appendTo("#appConfigActionsContent").on('click', function() {
             var $this = $(this);
             $.ajax({
               method: 'POST',
