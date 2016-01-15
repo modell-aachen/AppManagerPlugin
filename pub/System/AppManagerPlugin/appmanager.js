@@ -27,7 +27,7 @@
             }
           }
           $('#appConfigActionsContent').empty().append($select);
-          $('<a href="#">Go</a>').appendTo("#appConfigActionsContent").on('click', function() {
+          $('<a href="#"').appendTo("#appConfigActionsContent").on('click', function() {
             var $this = $(this);
             $.ajax({
               method: 'POST',
