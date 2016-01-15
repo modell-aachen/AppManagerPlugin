@@ -15,6 +15,7 @@
 <div id="appConfigDescriptionContent"></div>
 <div id="appConfigActionsHeader">%MAKETEXT{Actions}%</div>
 <div id="appConfigActionsContent"></div>
+<div id="appConfigActionsOutput"></div>
 </div>
 <div class="clear"></div>
 </div>

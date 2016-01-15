@@ -117,27 +117,28 @@ sub _appdiff {
             unless (opendir($tardh, $tar)) { $msg = "Could not open target directory"; }
             unless ($msg) {
                 # Compile unified list of readdir entries
-                $msg .= "Both directories: $src, $tar. Comparison:%BR%";
+                $msg .= "Both directories: $src, $tar. Comparison:<ul>";
                 my $list = {};
                 map {$list->{$_} = 1;} grep {(!/^\./ && !/,pfv$/)} (readdir($srcdh), readdir($tardh));
                 for my $item (sort keys %$list) {
                     my ($srcitem, $taritem) = (File::Spec->catfile($src, $item), File::Spec->catfile($tar, $item));
-                    if (! -e $srcitem) { $msg .= "$item only in target directory%BR%"; }
-                    elsif (! -e $taritem) { $msg .= "$item only in source directory%BR%"; }
+                    if (! -e $srcitem) { $msg .= "<li>$item only in target directory%BR%</li>"; }
+                    elsif (! -e $taritem) { $msg .= "<li>$item only in source directory%BR%</li>"; }
                     # If both files/directories exists, compare
                     if ( -e $srcitem && -e $taritem) {
-                        if ( -d $srcitem && -f $taritem) { $msg .=  "$item is directory in source, but file in target directory. This is most likely bad.%BR%"; }
-                        elsif ( -f $srcitem && -d $taritem) { $msg .=  "$item is file in source, but directory in target directory. This is most likely bad.%BR%"; }
-                        elsif ( -f $srcitem && -f $taritem && (_hashfile($srcitem) ne _hashfile($taritem))) { $msg .= "Source file and target file have different content%BR%"; }
-                        elsif ( -d $srcitem && -d $taritem) { $msg .= "$item is a directory in both source and target. Comparison of subdirectories currently not implemented.%BR%"; }
+                        if ( -d $srcitem && -f $taritem) { $msg .=  "<li>$item is directory in source, but file in target directory. This is most likely bad.</li>"; }
+                        elsif ( -f $srcitem && -d $taritem) { $msg .=  "<li>$item is file in source, but directory in target directory. This is most likely bad.</li>"; }
+                        elsif ( -f $srcitem && -f $taritem && (_hashfile($srcitem) ne _hashfile($taritem))) { $msg .= "<li>$item: Source file and target file have different content</li>"; }
+                        elsif ( -d $srcitem && -d $taritem) { $msg .= "<li>$item is a directory in both source and target. Comparison of subdirectories currently not implemented.</li>"; }
                     }
                 }
+                $msg .= '</ul>';
                 closedir($srcdh);
                 closedir($tardh);
             }
         }
         # Compile result of operation, if messages found
-        if ($msg) { $result .= sprintf("*%s %s %s*: %s", $op, $src, $tar, $msg); }
+        if ($msg) { $result .= sprintf("<p><strong>%s %s %s</strong></p>%s", $op, $src, $tar, $msg); }
     }
     return {
         "result" => "ok",

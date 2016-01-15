@@ -38,7 +38,7 @@
               }
             }).done(function(res) {
               var a = $.parseJSON(res);
-              $("#appConfigActionsContent").text(a.info.data);
+              $("#appConfigActionsOutput").empty().append(a.info.data);
             });
             return false;
           });

@@ -7,13 +7,13 @@
 #appMainContainer {
     float: left;
     border-right: 2px dotted #333;
-    width: 70%;
+    width: 55%;
     padding: 10px;
 }
 #appConfigContainer {
     float: left;
     padding: 0 10px;
-    width: 27%;
+    width: 40%;
 }
 #managedAppsHeader {
     font-size: 20px;
