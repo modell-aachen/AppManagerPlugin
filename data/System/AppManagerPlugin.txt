@@ -71,6 +71,8 @@ The install field contains all information for the execution of the move action.
       * value: target file or directory.
 
 ---+++ REST handlers
+
+All REST handlers are only accessible by the AdminUser.
 <table class="Modac_Standard">
 	<thead>
 		<tr>
@@ -112,7 +114,16 @@ The install field contains all information for the execution of the move action.
 	<tr>
 		<td>
 			<pre>/bin/rest/AppManagerPlugin/appaction?name=InvestmentAppContrib&action=install</pre>
+			Tries to install a single application
 		</td>
+<td colspan="2">
+	See _Response: result_ section.
+</td>
+</tr>
+	<td>
+		<pre>/bin/rest/AppManagerPlugin/installall</pre>
+		Tries to install all applications.
+	</td>
 <td colspan="2">
 	See _Response: result_ section.
 </td>
@@ -140,7 +151,7 @@ The install field contains all information for the execution of the move action.
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
-|  0.3 | Change result format.  |
+|  0.3 | Change result format. Added "installall" REST handler. |
 |  0.2 | Changed appconfig.json install directives. Added appaction "diff". |
 |  0.1 | First functional prototype. |
 |  Home: | http://modell-aachen.de |

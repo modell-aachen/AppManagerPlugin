@@ -33,6 +33,7 @@ sub initPlugin {
 
     my %restopts = (authenticate => 1, validate => 0, http_allow => 'POST,GET');
     Foswiki::Func::registerRESTHandler('appaction', \&_RESTappaction, %restopts);
+    Foswiki::Func::registerRESTHandler('installall', \&_RESTinstallall, %restopts);
 
     $restopts{http_allow} = 'GET';
     Foswiki::Func::registerRESTHandler('applist',   \&_RESTapplist,   %restopts);
@@ -204,6 +205,9 @@ sub _install {
     map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
 
     my $conf = _getJSONConfig($app);
+    unless ($conf) {
+        return _texterror("Application $app does not exist");
+    }
     my $installname = '';
     my $mode = 'install';
     if (exists $args->{installname} || exists $conf->{installname}) {
@@ -359,6 +363,46 @@ sub _RESTappaction {
         }
     } else {
         return encode_json(_texterror('Action not available for app.'));
+    }
+}
+
+# Returns list of managed and unmanaged applications.
+sub _RESTinstallall {
+    my ($session, $subject, $verb, $response) = @_;
+
+    print STDERR "install all called\n";
+    # This page is only visible for the admin user
+    if (!Foswiki::Func::isAnAdmin()) {
+        return encode_json(_texterror('Only Admins are allowed to install all applications.'));
+    } else {
+        # Try install routine for all managed apps
+        my @log = ();
+        my $error = 0;
+        my $applist = _applist();
+        while (my ($name, $status) = each %$applist) {
+            if ($status eq 'managed') {
+                print STDERR "try installing $name with $status.\n";
+                my $detail = _appdetail($name);
+                if ($detail->{actions}->{install}) {
+                    my $res = _install($name);
+                    if ($res->{result} ne 'ok') {
+                        push @log, "Installation failed: $name";
+                        $error = 1;
+                    } else {
+                        push @log, "Installation succeeded: $name.";
+                    }
+                }
+            }
+        }
+        if ($error) {
+            return encode_json(_texterror(join(' ', ("Not all installations successful." ,@log))));
+        } else {
+            return encode_json({
+                "result" => "ok",
+                "type"   => "text",
+                "data"   => (join(' ', ("All installations successful." ,@log)))
+            });
+        }
     }
 }
 
