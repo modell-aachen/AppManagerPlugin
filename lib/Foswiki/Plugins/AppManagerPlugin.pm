@@ -122,8 +122,8 @@ sub _appdiff {
                 map {$list->{$_} = 1;} grep {(!/^\./ && !/,pfv$/)} (readdir($srcdh), readdir($tardh));
                 for my $item (sort keys %$list) {
                     my ($srcitem, $taritem) = (File::Spec->catfile($src, $item), File::Spec->catfile($tar, $item));
-                    if (! -e $srcitem) { $msg .= "<li>$item only in target directory%BR%</li>"; }
-                    elsif (! -e $taritem) { $msg .= "<li>$item only in source directory%BR%</li>"; }
+                    if (! -e $srcitem) { $msg .= "<li>$item only in target directory</li>"; }
+                    elsif (! -e $taritem) { $msg .= "<li>$item only in source directory</li>"; }
                     # If both files/directories exists, compare
                     if ( -e $srcitem && -e $taritem) {
                         if ( -d $srcitem && -f $taritem) { $msg .=  "<li>$item is directory in source, but file in target directory. This is most likely bad.</li>"; }
@@ -237,7 +237,7 @@ sub _install {
             my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
             if ($op eq 'move') {
                 # Take first key (should be only key from each object in move action
-                my $note =  "Installation will move files as follows:%BR%";
+                my $note =  "Installation will move files as follows:";
                 my @warnings = ();
                 # Iterate over move actions
                 my @passes = ('check');
@@ -245,7 +245,7 @@ sub _install {
                 for my $pass (@passes) {
                     # Check existance of source and target files
                     if ($pass eq 'check') {
-                        $note .= "$src to $tar%BR%";
+                        $note .= "$src to $tar";
                         unless ( -e $src) {
                             push @warnings, "Source file or directory $src does not exist!";
                         }
