@@ -17,8 +17,8 @@ require Digest::SHA;
 # Extra modules
 use JSON;
 
-our $VERSION = '0.2';
-our $RELEASE = '0.2';
+our $VERSION = '0.3';
+our $RELEASE = '0.3';
 our $SHORTDESCRIPTION  = 'AppManager';
 our $NO_PREFS_IN_TOPIC = 1;
 
