@@ -144,7 +144,7 @@ sub _appdiff {
     }
     return {
         "result" => "ok",
-        "type" => html",
+        "type" => "html",
         "data" => $result
     };
 }
