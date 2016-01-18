@@ -1,48 +1,68 @@
 (function($) {
-  $('document').ready(function() {
-    var p = foswiki.preferences;
-    $.get(p.SCRIPTURL + "/rest/" + p.SCRIPTSUFFIX + "/AppManagerPlugin/applist", function(data, textStatus, XMLHttpRequest) {
-      var apps = $.parseJSON(data);
-      for (var key in apps) {
-        var value = apps[key];
-        if (value === 'managed') {
-          $('#managedAppsContainer').append('<div class="managedAppContainer" id="' + key + '">' + key + '</div>'); 
-        } else {
-          $('#unmanagedAppsContainer').append('<div class="unmanagedAppContainer" id="' + key + '">' + key + '</div>'); 
-        }
-      };
-    }).done(function() {
-      $('#managedAppsContainer, #unmanagedAppsContainer').append('<div class="clear"></div>');
+  var restUrl = function(endPoint) {
+    return [
+      foswiki.getPreference('SCRIPTURL'),
+      '/rest',
+      foswiki.getPreference('SCRIPTSUFFIX'),
+      '/AppManagerPlugin/',
+      endPoint
+    ].join('');
+  };
 
-      $('.managedAppContainer').unbind('click').bind('click', function() {
-        var $container = $(this);
-        $.get(p.SCRIPTURL + "/rest/" + p.SCRIPTSUFFIX + "AppManagerPlugin/appdetail", {name: $(this).attr('id')}, function(data, textStatus, XMLHttpRequest) {
-          var appInformation = $.parseJSON(data);
-          $('#appConfigDescriptionContent').empty().append(appInformation.description);
-          var $select = $('<select></select>');
-          for (var action in appInformation.actions) {
-            if (typeof appInformation.actions[action] === "object") {
-              $('<option value="' + action + '">' + action  + '</option>').appendTo($select);
-            }
-          }
-          $('#appConfigActionsContent').empty().append($select);
-          $('<a href="#">Go</a>').appendTo("#appConfigActionsContent").on('click', function() {
-            var $this = $(this);
-            $.ajax({
-              method: 'POST',
-              url: p.SCRIPTURL + "/rest/" + p.SCRIPTSUFFIX + "/AppManagerPlugin/appaction",
-              data: {
-                name: $container.attr('id'),
-                action: $select.val()
-              }
-            }).done(function(res) {
-              var a = $.parseJSON(res);
-              $("#appConfigActionsOutput").empty().append(a.info.data);
-            });
-            return false;
-          });
-        });
-      });
-    });
+  var onManagedAppClicked = function() {
+    var id = $(this).attr('id');
+    var $actions = $('#appConfigActionsContent').empty();
+
+    $.blockUI();
+    $.get(restUrl('appdetail'), {name: id}, function(data, status, xhr) {
+      var details = $.parseJSON(data);
+      $('#appConfigDescriptionContent').empty().append(details.description);
+
+      var $select = $('<select></select>').appendTo($actions);
+      $select.data('action-id', id);
+      $('<a class="action" href="#">Go</a>').appendTo($actions);
+
+      for (var action in details.actions) {
+        if (typeof details.actions[action] === "object") {
+          $('<option value="' + action + '">' + action  + '</option>').appendTo($select);
+        }
+      }
+    }).always($.unblockUI);
+  };
+
+  var onActionClicked = function() {
+    var $select = $(this).parent().children('select');
+
+    $.blockUI();
+    $.ajax({
+      method: 'POST',
+      url: restUrl('appaction'),
+      data: {
+        name: $select.data('action-id'),
+        action: $select.val()
+      }
+    }).done(function(data) {
+      var action = $.parseJSON(data);
+      $("#appConfigActionsOutput").empty().append(action.info.data);
+    }).always($.unblockUI);
+
+    return false;
+  };
+
+  $(document).ready( function() {
+    $.blockUI();
+    $.get(restUrl('applist'), function(data, status, xhr) {
+      var apps = $.parseJSON(data);
+      var keys = Object.keys(apps).sort();
+      for (var i in keys ) {
+        var key = keys[i];
+        var type = apps[key];
+        var $div = $('<div class="' + type + 'AppContainer"></div>').attr('id', key).text(key);
+        $div.insertBefore($('#' + type + 'AppsContainer > .clear'));
+      };
+
+      $('#managedAppsContainer').on('click', '.managedAppContainer', onManagedAppClicked);
+      $('#appConfigActionsContent').on('click', 'a.action', onActionClicked)
+    }).always($.unblockUI);
   });
 })(jQuery);

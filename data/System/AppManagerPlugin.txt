@@ -1,23 +1,38 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
-
-<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>
-<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />
+<!--
+%JQREQUIRE{"blockui"}%
+%ADDTOZONE{
+  "script"
+  id="APPMANAGERCONTRIB::SCRIPTS"
+  requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
+  text="<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>"
+}%
+%ADDTOZONE{
+  "head"
+  id="APPMANAGERCONTRIB::STYLES"
+  text="<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />"
+}%
+-->
 <div id="mainContainer">
-<div id="appMainContainer">
-<div id="managedAppsHeader">Managed Apps</div>
-<div id="managedAppsContainer"></div>
-<div id="unmanagedAppsHeader">Unmanaged Apps</div>
-<div id="unmanagedAppsContainer"></div>
-</div>
-<div id="appConfigContainer">
-<div id="appConfigDescriptionHeader">%MAKETEXT{Description}%</div>
-<div id="appConfigDescriptionContent"></div>
-<div id="appConfigActionsHeader">%MAKETEXT{Actions}%</div>
-<div id="appConfigActionsContent"></div>
-<div id="appConfigActionsOutput"></div>
-</div>
-<div class="clear"></div>
+  <div id="appMainContainer">
+    <div id="managedAppsHeader">Managed Apps</div>
+    <div id="managedAppsContainer">
+      <div class="clear"></div>
+    </div>
+    <div id="unmanagedAppsHeader">Unmanaged Apps</div>
+    <div id="unmanagedAppsContainer">
+      <div class="clear"></div>
+    </div>
+  </div>
+  <div id="appConfigContainer">
+    <div id="appConfigDescriptionHeader">%MAKETEXT{Description}%</div>
+    <div id="appConfigDescriptionContent"></div>
+    <div id="appConfigActionsHeader">%MAKETEXT{Actions}%</div>
+    <div id="appConfigActionsContent"></div>
+    <div id="appConfigActionsOutput"></div>
+  </div>
+  <div class="clear"></div>
 </div>
 <br>
 
