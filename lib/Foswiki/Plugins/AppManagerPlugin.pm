@@ -117,12 +117,14 @@ sub _appdiff {
             unless (opendir($tardh, $tar)) { $msg = "Could not open target directory"; }
             unless ($msg) {
                 # Compile unified list of readdir entries
-                $msg .= "Both directories: $src, $tar. Comparison:<ul>";
+                $msg .= "Both directories: $src, $tar. Differences:<ul>";
                 my $list = {};
                 map {$list->{$_} = 1;} grep {(!/^\./ && !/,pfv$/)} (readdir($srcdh), readdir($tardh));
+                closedir($srcdh);
+                closedir($tardh);
                 for my $item (sort keys %$list) {
                     my ($srcitem, $taritem) = (File::Spec->catfile($src, $item), File::Spec->catfile($tar, $item));
-                    if (! -e $srcitem) { $msg .= "<li>$item only in target directory</li>"; }
+                    if    (! -e $srcitem) { $msg .= "<li>$item only in target directory</li>"; }
                     elsif (! -e $taritem) { $msg .= "<li>$item only in source directory</li>"; }
                     # If both files/directories exists, compare
                     if ( -e $srcitem && -e $taritem) {
@@ -133,19 +135,17 @@ sub _appdiff {
                     }
                 }
                 $msg .= '</ul>';
-                closedir($srcdh);
-                closedir($tardh);
             }
+        } elsif ( -d $src && (! -e $tar)) {
+            $msg = "Target directory $tar does not exist. This ist not an error.";
         }
         # Compile result of operation, if messages found
         if ($msg) { $result .= sprintf("<p><strong>%s %s %s</strong></p>%s", $op, $src, $tar, $msg); }
     }
     return {
         "result" => "ok",
-        "info"   => {
-            "type" => "text",
-            "data" => $result
-        }
+        "type" => html",
+        "data" => $result
     };
 }
 
@@ -199,75 +199,62 @@ sub _getRootDir {
 # $app is mandatory,
 # $args is optional
 sub _install {
-    my ($name, $args, @bad) = @_;
+    my ($app, $args, @bad) = @_;
     die "Extra parameters in " . (caller(0))[3] if @bad;
-    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($name);
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
 
-    my @apps;
-    if ($name eq 'all') {
-        my $applist = _applist();
-        while(my ($name, $status) = each %$applist) {
-            if ($status eq 'managed') {
-                my $detail = _appdetail($name);
-                if ($detail->{actions}->{install}) {
-                    push @apps, $name;
-                }
-            }
-        }
-    } else {
-        @apps = ($name);
+    my $conf = _getJSONConfig($app);
+    my $installname = '';
+    my $mode = 'install';
+    if (exists $args->{installname} || exists $conf->{installname}) {
+        $installname = $args->{installname} || $conf->{installname};
     }
-
-    my $results = {};
-    for my $app (@apps) {
-        my $conf = _getJSONConfig($app);
-        my $installname = '';
-        my $mode = 'install';
-        if (exists $args->{installname} || exists $conf->{installname}) {
-            $installname = $args->{installname} || $conf->{installname};
+    if (exists $args->{mode}) {
+        $mode = $args->{mode};
+    }
+    my @operations = _installOperations($app, $installname);
+    # Return notices
+    my @log = ();
+    my $error = 0;
+    my @passes = ('check');
+    if (($mode eq 'install') or ($mode eq 'forceinstall')) { push @passes, $mode; }
+    for my $pass (@passes) {
+        # Skip installation pass if error and not forceinstall
+        if (($pass eq 'install') and ($error)) {
+            last;
         }
-        if (exists $args->{mode}) {
-            $mode = $args->{mode};
-        }
-        my @operations = _installOperations($app, $installname);
-        # Return notices
-        my $res = [];
+        push @log, "Run: $pass";
         # Iterate all install routines;
         for (my $i = 0; $i < scalar @operations; $i += 3) {
             my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
             if ($op eq 'move') {
-                # Take first key (should be only key from each object in move action
-                my $note =  "Installation will move files as follows:";
-                my @warnings = ();
-                # Iterate over move actions
-                my @passes = ('check');
-                if (($mode eq 'install') or ($mode eq 'forceinstall')) { push @passes, $mode; }
-                for my $pass (@passes) {
-                    # Check existance of source and target files
-                    if ($pass eq 'check') {
-                        $note .= "$src to $tar";
-                        unless ( -e $src) {
-                            push @warnings, "Source file or directory $src does not exist!";
-                        }
-                        if ( -e $tar) {
-                            push @warnings, "Target file or directory $tar does already exist!";
-                        }
-                    } elsif ((($pass eq 'install') and (! scalar @warnings)) or ($pass eq 'forceinstall')) {
-                        Foswiki::Func::writeWarning("move $src to $tar.");
-                        File::Copy::move($src, $tar);
-                    }
-                }
-                push @$res, ['info', $note];
-                if (scalar @warnings) {
-                    push @$res, map(['warning', $_], @warnings);
-                } elsif ($mode ne 'install') {
-                    push @$res, ['can_install', '1'];
+                # Check existance of source and target files
+                push @log, "Move $src to $tar";
+                if ($pass eq 'check') {
+                    if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
+                    if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
+                } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
+                    File::Copy::move($src, $tar);
                 }
             }
         }
-        $results->{$app} = $res;
     }
-    return $results;
+    my $result;
+    my $log = join('', map {sprintf('<li>%s</li>', $_)} @log);
+    if ($error) {
+        $result = {
+            "result" => "error",
+            "type"   => "html",
+            "data"   => (sprintf("<p><strong>Error during checks</strong></p><ul>%s</ul>", $log))
+        };
+    } else {
+        $result = {
+            "result" => "ok",
+            "type"   => "html",
+            "data"   => (sprintf("<p><strong>Appaction successful</strong></p><ul>%s</ul>", $log))
+        };
+    }
+    return $result;
 }
 
 # Return sha256 checksum of content of file.
@@ -312,10 +299,8 @@ sub _texterror {
 
     return {
         "result" => "error",
-        "info"   => {
-            "type" => "text",
-            "data" => $msg
-        }
+        "type" => "text",
+        "data" => $msg
     };
 }
 

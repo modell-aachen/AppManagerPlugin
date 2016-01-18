@@ -43,7 +43,12 @@
       }
     }).done(function(data) {
       var action = $.parseJSON(data);
-      $("#appConfigActionsOutput").empty().append(action.info.data);
+      // Show appaction results
+      if (action.type === "text") {
+        $("#appConfigActionsOutput").empty().text(action.data);
+      } else if (action.type == "html"){
+        $("#appConfigActionsOutput").empty().append(action.data);
+      }
     }).always($.unblockUI);
 
     return false;

@@ -114,29 +114,33 @@ The install field contains all information for the execution of the move action.
 			<pre>/bin/rest/AppManagerPlugin/appaction?name=InvestmentAppContrib&action=install</pre>
 		</td>
 <td colspan="2">
-<pre>{
-    "result": $result,
-    "info": {
-        "type" : $type,
-        "data" : $data
-    }
-}</pre>
-   * ==$result==: ="ok"|"error"|"unknown"=
-   * ==$type==: ="text"=
-   * ==$data==: Depending on =$type=.
-      * type: "text", "JSON text meant to be displayed raw.
+	See _Response: result_ section.
 </td>
 </tr>
 </table>
 
+---+++ Response: result
+
+<pre>{
+    "result": $result,
+    "type" : $type,
+    "data" : $data
+}</pre>
+   * ==$result==: ="ok"|"error"|"unknown"=
+   * ==$type==: ="text"|"html"=
+   * ==$data==: Depending on =$type=.
+      * ="text"=: Text meant to be displayed raw.
+      * ="html"=: Text meant to inserted into page.
+
 ---++ Plugin Info
 
-|  Author: | Maik Glatki, Andreas Hennes |
+|  Authors: | Maik Glatki, Andreas Hennes |
 |  Copyright: | &copy; 2015, Modell Aachen GmbH |
 |  License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
+|  0.3 | Change result format.  |
 |  0.2 | Changed appconfig.json install directives. Added appaction "diff". |
 |  0.1 | First functional prototype. |
 |  Home: | http://modell-aachen.de |
