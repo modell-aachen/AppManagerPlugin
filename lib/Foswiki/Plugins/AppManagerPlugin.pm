@@ -370,7 +370,6 @@ sub _RESTappaction {
 sub _RESTinstallall {
     my ($session, $subject, $verb, $response) = @_;
 
-    print STDERR "install all called\n";
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
         return encode_json(_texterror('Only Admins are allowed to install all applications.'));
@@ -381,7 +380,6 @@ sub _RESTinstallall {
         my $applist = _applist();
         while (my ($name, $status) = each %$applist) {
             if ($status eq 'managed') {
-                print STDERR "try installing $name with $status.\n";
                 my $detail = _appdetail($name);
                 if ($detail->{actions}->{install}) {
                     my $res = _install($name);
