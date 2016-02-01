@@ -18,9 +18,13 @@
       var details = $.parseJSON(data);
       $('#appConfigDescriptionContent').empty().append(details.description);
 
-      var $select = $('<select></select>').appendTo($actions);
+      var $selectDiv = $('<div class="actionSelectContainer"></div>').appendTo($actions);
+      var $submitDiv = $('<div class="actionSubmitContainer"></div>').appendTo($actions);
+      $('<div class="clear"></div>').appendTo($actions);
+
+      var $select = $('<select></select>').appendTo($selectDiv);
       $select.data('action-id', id);
-      $('<a class="action" href="#">Go</a>').appendTo($actions);
+      $('<a class="action" href="#">Go</a>').appendTo($submitDiv);
 
       for (var action in details.actions) {
         if (typeof details.actions[action] === "object") {
