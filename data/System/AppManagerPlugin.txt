@@ -1,20 +1,43 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
+<!--
+%JQREQUIRE{"blockui"}%
+%ADDTOZONE{
+  "script"
+  id="APPMANAGERCONTRIB::SCRIPTS"
+  requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
+  text="<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>"
+}%
+%ADDTOZONE{
+  "head"
+  id="APPMANAGERCONTRIB::STYLES"
+  text="<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />"
+}%
+-->
+<div id="mainContainer">
+  <div id="appMainContainer">
+    <div id="managedAppsHeader">Managed Apps</div>
+    <div id="managedAppsContainer">
+      <div class="clear"></div>
+    </div>
+    <div id="unmanagedAppsHeader">Unmanaged Apps</div>
+    <div id="unmanagedAppsContainer">
+      <div class="clear"></div>
+    </div>
+  </div>
+  <div id="appConfigContainer">
+    <div id="appConfigDescriptionHeader">%MAKETEXT{Description}%</div>
+    <div id="appConfigDescriptionContent"></div>
+    <div id="appConfigActionsHeader">%MAKETEXT{Actions}%</div>
+    <div id="appConfigActionsContent"></div>
+    <div id="appConfigActionsOutputHeader">%MAKETEXT{Output}%</div>
+    <div id="appConfigActionsOutput"></div>
+  </div>
+  <div class="clear"></div>
+</div>
+<br>
 
-%SHORTDESCRIPTION%
-
-<script type='text/javascript'>
-    window.appDataObj = %AMPAPPLIST%;
-</script>
-
-<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>
-<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />
-
-<div id="mainContainer"></div>
-
-Placeholder for actual GUI:
-%AMPUGLY%
----++ API
+---++ Documentation
 
 ---+++ _appconfig.json_
 Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Foswiki/Contrib/MyAppContrib/appconfig.json_):
@@ -29,14 +52,18 @@ Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Fosw
     "description": "<nop>%SHORTDESCRIPTION%</nop>",
     "installname": "MyApp",
     "install": [
-        {
-            "move": [
-                {"data/_apps/MyApp": "data/%INSTALLNAME%"}
+            "move", "%DATADIR%data/_apps/MyApp", "%DATADIR%/%INSTALLNAME%"
             ]
         }
     ]
 }
 </pre>
+
+Available variables:
+   * =%SHORTDESCRIPTION%=: Will be replaced with information from Contrib .pm file.
+   * =%INSTALLNAME%=: Will be replaced with application installname parameter or default.
+   * =%DATADIR%=: Will be replaced with, Foswiki {DataDir}.
+   * =%PUBDIR%=: Will be replaced with, Foswiki {PubDir}.
 
 ---++++ Action: install
 The install field contains all information for the execution of the move action. The move command in the insta
@@ -45,6 +72,8 @@ The install field contains all information for the execution of the move action.
       * value: target file or directory.
 
 ---+++ REST handlers
+
+All REST handlers are only accessible by the AdminUser.
 <table class="Modac_Standard">
 	<thead>
 		<tr>
@@ -69,7 +98,15 @@ The install field contains all information for the execution of the move action.
 			<pre>/bin/rest/AppManagerPlugin/appdetail?name=InvestmentAppContrib</pre>
 		</td>
 		<td>
-			<pre>{"description": "Whatever", "status": "Ist sauber installiert", "actions:" {"install": "freitext"}}</pre>
+<pre>{
+  "description": "Whatever",
+  "status": "Ist sauber installiert",
+  "actions:" {
+    "install": {
+      "description": "freitext",
+      "parameters": {"param1": {"type" "text", "default"="foo"}
+  }
+}</pre>
 		</td>
 		<td>
 			<pre>{"error" :"access to REST handler not allowed"}</pre>
@@ -78,26 +115,46 @@ The install field contains all information for the execution of the move action.
 	<tr>
 		<td>
 			<pre>/bin/rest/AppManagerPlugin/appaction?name=InvestmentAppContrib&action=install</pre>
+			Tries to install a single application
 		</td>
-		<td>
-			Currently not defined
-		</td>
-		<td>
-			<pre>{"error" :"action not available for this application."}</pre>
-		</td>
-	</tr>
+<td colspan="2">
+	See _Response: result_ section.
+</td>
+</tr>
+	<td>
+		<pre>/bin/rest/AppManagerPlugin/installall</pre>
+		Tries to install all applications.
+	</td>
+<td colspan="2">
+	See _Response: result_ section.
+</td>
+</tr>
 </table>
+
+---+++ Response: result
+
+<pre>{
+    "result": $result,
+    "type" : $type,
+    "data" : $data
+}</pre>
+   * ==$result==: ="ok"|"error"|"unknown"=
+   * ==$type==: ="text"|"html"=
+   * ==$data==: Depending on =$type=.
+      * ="text"=: Text meant to be displayed raw.
+      * ="html"=: Text meant to inserted into page.
 
 ---++ Plugin Info
 
-|  Author: | Maik Glatki, Andreas Hennes |
+|  Authors: | Maik Glatki, Andreas Hennes |
 |  Copyright: | &copy; 2015, Modell Aachen GmbH |
 |  License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
+|  0.3 | Change result format. Added "installall" REST handler. |
+|  0.2 | Changed appconfig.json install directives. Added appaction "diff". |
 |  0.1 | First functional prototype. |
 |  Home: | http://modell-aachen.de |
 %META:FILEATTACHMENT{name="appmanager.js" attachment="appmanager.js" attr="" comment="" date="1450175796" path="appmanager.js" size="337737" user="BaseUserMapping_333" version="1"}%
 %META:FILEATTACHMENT{name="appmanager.css" attachment="appmanager.css" attr="" comment="" date="1450175796" path="appmanager.css" size="337737" user="BaseUserMapping_333" version="1"}%
-

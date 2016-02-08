@@ -1,75 +1,133 @@
 .clear {
     clear: both;
 }
-.singleAppContainer {
-    border: 2px dotted #a7d7f9;
-    border-radius: 5px;
-    height: 140px;
-    padding: 5px;
+#mainContainer {
+
 }
-.singleAppName {
-    font-size: 25px;
-    text-align: center;
+#appMainContainer {
     float: left;
-    width: 22%;
-    height: 85px;
-    padding-top: 58px;
-    border-right: 2px dotted #a7d7f9;
-}
-.singleAppDescription {
-    border-right: 2px dotted #a7d7f9;
-    float: left;
-    height: 124px;
+    border-right: 2px dotted #333;
+    width: 55%;
     padding: 10px;
-    width: 25%;
 }
-.singleAppHeader {
-    font-size: 16px;
-    font-weight: bold;
-    text-align: center;
-}
-.singleAppDetails {
-    border-right: 2px dotted #a7d7f9;
+#appConfigContainer {
     float: left;
-    height: 122px;
-    padding: 10px;
-    width: 20%;
-}
-.singleAppActions {
-    float: right;
-    padding: 10px;
-    width: 28%;
-    height: 123px;
-}
-.singleAppDescContent {
-    overflow-x: hidden;
-    overflow-y: scroll;
-    height: 115px;
-}
-.singleAppActionsNoContent {
-    color: #ff0000;
-    font-size: 20px;
-    font-weight: bold;
-    padding: 30px 0 0;
-    text-align: center;
-}
-.singleAppActionsContentSelect {
-    float: left;
+    padding: 0 10px;
     width: 40%;
 }
-.singleAppActionsContentDesc {
+#managedAppsHeader {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0 0 20px 0;
+}
+#unmanagedAppsHeader {
+    color: #666;
+    font-size: 20px;
+    font-weight: bold;
+    margin: 20px 0;
+}
+#managedAppsContainer {
+
+}
+#unmanagedAppsContainer {
+
+}
+.managedAppContainer, .unmanagedAppContainer {
+    border: 1px solid #ccc;
+    border-radius: 10px;
     float: left;
-    padding-left: 40px;
-    width: 50%;
+    height: 35px;
+    padding-top: 20px;
+    margin: 10px;
+    width: 200px;
+    text-align: center;
+    cursor: pointer;
 }
-.singleAppActionSelect {
-    width: 100%;
+.managedAppContainer {
+    background-image: -webkit-gradient(
+        linear,
+        left top,
+        left bottom,
+        color-stop(0, #FFFFFF),
+        color-stop(1, #EDEFF5)
+    );
+    background-image: -o-linear-gradient(bottom, #FFFFFF 0%, #EDEFF5 100%);
+    background-image: -moz-linear-gradient(bottom, #FFFFFF 0%, #EDEFF5 100%);
+    background-image: -webkit-linear-gradient(bottom, #FFFFFF 0%, #EDEFF5 100%);
+    background-image: -ms-linear-gradient(bottom, #FFFFFF 0%, #EDEFF5 100%);
+    background-image: linear-gradient(to bottom, #FFFFFF 0%, #EDEFF5 100%);
+}
+.unmanagedAppContainer {
+    color: #ccc;
+    background-image: -webkit-gradient(
+        linear,
+        left top,
+        left bottom,
+        color-stop(0, #FAFAFA),
+        color-stop(1, #FFFFFF),
+        color-stop(1, #cccccc)
+    );
+    background-image: -o-linear-gradient(bottom, #FAFAFA 0%, #FFFFFF 100%, #cccccc 100%);
+    background-image: -moz-linear-gradient(bottom, #FAFAFA 0%, #FFFFFF 100%, #cccccc 100%);
+    background-image: -webkit-linear-gradient(bottom, #FAFAFA 0%, #FFFFFF 100%, #cccccc 100%);
+    background-image: -ms-linear-gradient(bottom, #FAFAFA 0%, #FFFFFF 100%, #cccccc 100%);
+    background-image: linear-gradient(to bottom, #FAFAFA 0%, #FFFFFF 100%, #cccccc 100%);
+}
+#appConfigDescriptionHeader, #appConfigActionsHeader, #appConfigActionsOutputHeader {
+    background-color: #eeeeee;
+    font-size: 20px;
+    font-weight: bold;
     height: 30px;
+    padding-top: 15px;
+    text-align: center;
 }
-.singleAppActionSubmit {
-    height: 30px;
-    width: 110px;
+#appConfigDescriptionContent {
+    padding: 10px;
 }
-.singleAppSubmitContainer {
-    margin: 10px 0 0 0;
+#appConfigActionsContent {
+    padding: 10px;
+}
+#appConfigActionsOutput {
+    padding: 10px;
+}
+.actionSelectContainer {
+    float: left;
+}
+.actionSelectContainer select {
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 20px;
+    height: 40px;
+    text-align: center;
+    width: 200px;
+}
+.actionSubmitContainer {
+    float: left;
+    margin: 0 0 0 20px;
+}
+.actionSubmitContainer a {
+    -moz-user-select: none;
+    background-color: #286090;
+    background-image: none;
+    border: 1px solid #122b40;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857;
+    margin-bottom: 0;
+    padding: 8px 12px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    width: 100px;
+}
+.actionSubmitContainer a:hover {
+    background-color: #286090;
+    background-image: none;
+    border: 1px solid #122b40;
+    text-decoration: none;
+    color: #fff;
 }

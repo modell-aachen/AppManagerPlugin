@@ -10,31 +10,30 @@ use Foswiki::Plugins ();
 
 # Core modules
 use Carp;
-use File::Spec;
-use File::Copy;
+require File::Spec;
+require File::Copy;
+require Digest::SHA;
 
 # Extra modules
 use JSON;
 
-our $VERSION = '0.1';
-our $RELEASE = '0.1';
+our $VERSION = '0.3';
+our $RELEASE = '0.3';
 our $SHORTDESCRIPTION  = 'AppManager';
 our $NO_PREFS_IN_TOPIC = 1;
 
 sub initPlugin {
-    my ( $topic, $web, $user, $installWeb ) = @_;
+    my ($topic, $web, $user, $installWeb) = @_;
 
     # check for Plugins.pm versions
-    if ( $Foswiki::Plugins::VERSION < 2.0 ) {
+    if ($Foswiki::Plugins::VERSION < 2.0) {
         Foswiki::Func::writeWarning('Version mismatch between ' . __PACKAGE__ . ' and Plugins.pm');
         return 0;
     }
 
-    # Workaround until a better interface comes around.
-    Foswiki::Func::registerTagHandler('AMPUGLY', \&_uglytable);
-
     my %restopts = (authenticate => 1, validate => 0, http_allow => 'POST,GET');
     Foswiki::Func::registerRESTHandler('appaction', \&_RESTappaction, %restopts);
+    Foswiki::Func::registerRESTHandler('installall', \&_RESTinstallall, %restopts);
 
     $restopts{http_allow} = 'GET';
     Foswiki::Func::registerRESTHandler('applist',   \&_RESTapplist,   %restopts);
@@ -45,9 +44,9 @@ sub initPlugin {
 ## Internal helpers
 # Returns application details
 sub _appdetail  {
-    my ( $app, @bad ) = @_;
+    my ($app, @bad) = @_;
     die "Extra parameters in " . (caller(0))[3] if @bad;
-    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ( $app );
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
 
     my $conf = _getJSONConfig($app);
     if ($conf) {
@@ -66,11 +65,18 @@ sub _appdetail  {
 
         # Collect actions
         my $actions = {};
-        if ($conf->{'install'}) { $actions->{install} = 'Install the application';}
+        if ($conf->{'install'}) {
+            $actions->{install} = {
+                "description" => "Install the application",
+                "parameters" => {"appname" => { "type" => "text"}}
+            };
+            # "install" action implies "diff" action
+            $actions->{diff} = $actions->{install};
+        }
         $res->{actions} = $actions;
         return $res;
     } else {
-        return {'error' => 'Not an application or application unmanaged'};
+        return _texterror('Not an application or application unmanaged');
     }
 }
 
@@ -89,11 +95,66 @@ sub _applist {
     return $applist;
 }
 
+# Returns formatted list of differences between installed and installable app.
+sub _appdiff {
+    my ($app, $appname, @bad) = @_;
+    die "Extra parameters in " . (caller(0))[3] if @bad;
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
+
+    # Get operations
+    my $result = '';
+    my @operations = _installOperations($app, $appname);
+    for (my $i = 0; $i < scalar @operations; $i += 3) {
+        my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
+        # Compare entries.
+        my $msg = '';
+        if (! -e $src) { $msg = "Source file or directory does not exist"; }
+        elsif ( -d $src && -f $tar) { $msg =  "Source is a directory, but target is a file. This is most likely bad."; }
+        elsif ( -f $src && -d $tar) { $msg =  "Source is a file, but target is a directory. This is most likely bad."; }
+        elsif (( -f $src && -f $tar) && (_hashfile($src) ne _hashfile($tar))) { $msg = "Source file and target file have different content"; }
+        elsif ( -d $src && -d $tar) { # Compare directories
+            my ($srcdh, $tardh);
+            unless (opendir($srcdh, $src)) { $msg = "Could not open source directory"; }
+            unless (opendir($tardh, $tar)) { $msg = "Could not open target directory"; }
+            unless ($msg) {
+                # Compile unified list of readdir entries
+                $msg .= "Both directories: $src, $tar. Differences:<ul>";
+                my $list = {};
+                map {$list->{$_} = 1;} grep {(!/^\./ && !/,pfv$/)} (readdir($srcdh), readdir($tardh));
+                closedir($srcdh);
+                closedir($tardh);
+                for my $item (sort keys %$list) {
+                    my ($srcitem, $taritem) = (File::Spec->catfile($src, $item), File::Spec->catfile($tar, $item));
+                    if    (! -e $srcitem) { $msg .= "<li>$item only in target directory</li>"; }
+                    elsif (! -e $taritem) { $msg .= "<li>$item only in source directory</li>"; }
+                    # If both files/directories exists, compare
+                    if ( -e $srcitem && -e $taritem) {
+                        if ( -d $srcitem && -f $taritem) { $msg .=  "<li>$item is directory in source, but file in target directory. This is most likely bad.</li>"; }
+                        elsif ( -f $srcitem && -d $taritem) { $msg .=  "<li>$item is file in source, but directory in target directory. This is most likely bad.</li>"; }
+                        elsif ( -f $srcitem && -f $taritem && (_hashfile($srcitem) ne _hashfile($taritem))) { $msg .= "<li>$item: Source file and target file have different content</li>"; }
+                        elsif ( -d $srcitem && -d $taritem) { $msg .= "<li>$item is a directory in both source and target. Comparison of subdirectories currently not implemented.</li>"; }
+                    }
+                }
+                $msg .= '</ul>';
+            }
+        } elsif ( -d $src && (! -e $tar)) {
+            $msg = "Target directory $tar does not exist. This ist not an error.";
+        }
+        # Compile result of operation, if messages found
+        if ($msg) { $result .= sprintf("<p><strong>%s %s %s</strong></p>%s", $op, $src, $tar, $msg); }
+    }
+    return {
+        "result" => "ok",
+        "type" => "html",
+        "data" => $result
+    };
+}
+
 # Check for existing JSON file. Return undef on error.
 sub _getJSONConfig {
-    my ( $app, @bad ) = @_;
+    my ($app, @bad) = @_;
     die "Extra parameters in " . (caller(0))[3] if @bad;
-    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ( $app );
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
 
     my $res = undef;
     my $jsonPath = File::Spec->catfile(_getRootDir(), 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
@@ -113,7 +174,7 @@ sub _getJSONConfig {
             my $jsonAppConfig = decode_json($json_text);
 
             # Validate JSON structure
-            for my $check (qw(description install appname)) {
+            for my $check (qw(description install installname appname)) {
                 unless (exists $jsonAppConfig->{description}) {
                     push @missing, $check;
                     $error = 1;
@@ -129,7 +190,7 @@ sub _getJSONConfig {
     return $res;
 }
 
-# Return Foswiki root directory.
+#Return Foswiki root directory.
 sub _getRootDir {
     # FIXME there has to be a better solution
     return $Foswiki::cfg{TemplateDir} . '/..';
@@ -139,132 +200,129 @@ sub _getRootDir {
 # $app is mandatory,
 # $args is optional
 sub _install {
-    my ( $name, $args, @bad ) = @_;
+    my ($app, $args, @bad) = @_;
     die "Extra parameters in " . (caller(0))[3] if @bad;
-    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ( $name);
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
 
-    my @apps;
-    if ($name eq 'all') {
-        my $applist = _applist();
-        while(my ($name, $status) = each %$applist) {
-            if ($status eq 'managed') {
-                my $detail = _appdetail($name);
-                if ($detail->{actions}->{install}) {
-                    push @apps, $name;
-                }
-            }
-        }
-    } else {
-        @apps = ($name);
+    my $conf = _getJSONConfig($app);
+    unless ($conf) {
+        return _texterror("Application $app does not exist");
     }
-
-    my $results = {};
-    for my $app (@apps) {
-        my $conf = _getJSONConfig($app);
-        my $actions = $conf->{install};
-        my $installname = '';
-        my $mode = 'install';
-        if (exists $args->{installname} || exists $conf->{installname}) {
-            $installname = $args->{installname} || $conf->{installname};
+    my $installname = '';
+    my $mode = 'install';
+    if (exists $args->{installname} || exists $conf->{installname}) {
+        $installname = $args->{installname} || $conf->{installname};
+    }
+    if (exists $args->{mode}) {
+        $mode = $args->{mode};
+    }
+    my @operations = _installOperations($app, $installname);
+    # Return notices
+    my @log = ();
+    my $error = 0;
+    my @passes = ('check');
+    if (($mode eq 'install') or ($mode eq 'forceinstall')) { push @passes, $mode; }
+    for my $pass (@passes) {
+        # Skip installation pass if error and not forceinstall
+        if (($pass eq 'install') and ($error)) {
+            last;
         }
-        if (exists $args->{mode}) {
-            $mode = $args->{mode};
-        }
-        # Return notices
-        my $res = [];
+        push @log, "Run: $pass";
         # Iterate all install routines;
-        for my $action (@$actions) {
-            # We are only interested in the first object, the actual action.
-            my $actA =  (keys %$action)[0];
-            if ($actA eq 'move') {
-                # Iterate all files to move
-                my @toMove = @{$action->{'move'}};
-                # Take first key (should be only key from each object in move action
-                my $note =  "Installation will move files as follows:%BR%";
-                my @warnings = ();
-                # Iterate over move actions
-                my @passes = ('check');
-                if (($mode eq 'install') or ($mode eq 'forceinstall')) {
-                    push @passes, $mode;
-                }
-                chdir _getRootDir();
-                for my $pass (@passes) {
-                    # FIXME this duplication smells
-                    for my $move (@toMove) {
-                        my ($src, $tar) = ((keys %$move)[0], $move->{(keys %$move)[0]});
-                        # Substitute place holders in paths
-                        if ($installname) {
-                            $src =~ s/%INSTALLNAME%/$installname/g;
-                            $tar =~ s/%INSTALLNAME%/$installname/g;
-                        }
-                        # Check existance of source and target files
-                        if ($pass eq 'check') {
-                            $note .= "$src to $tar%BR%";
-                            unless ( -e $src) {
-                                push @warnings, "Source file or directory $src does not exist!";
-                            }
-                            if ( -e $tar) {
-                                push @warnings, "Target file or directory $tar does already exist!";
-                            }
-                        } elsif ((($pass eq 'install') and (! scalar @warnings)) or ($pass eq 'forceinstall')) {
-                            Foswiki::Func::writeWarning("move $src to $tar.");
-                            File::Copy::move($src, $tar);
-                        }
-                    }
-                }
-                push @$res, ['info', $note];
-                if (scalar @warnings) {
-                    push @$res, map(['warning', $_], @warnings);
-                } elsif ($mode ne 'install') {
-                    push @$res, ['can_install', '1'];
+        for (my $i = 0; $i < scalar @operations; $i += 3) {
+            my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
+            if ($op eq 'move') {
+                # Check existance of source and target files
+                push @log, "Move $src to $tar";
+                if ($pass eq 'check') {
+                    if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
+                    if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
+                } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
+                    File::Copy::move($src, $tar);
                 }
             }
         }
-        $results->{$app} = $res;
     }
-    return $results;
+    my $result;
+    my $log = join('', map {sprintf('<li>%s</li>', $_)} @log);
+    if ($error) {
+        $result = {
+            "result" => "error",
+            "type"   => "html",
+            "data"   => (sprintf("<p><strong>Error during checks</strong></p><ul>%s</ul>", $log))
+        };
+    } else {
+        $result = {
+            "result" => "ok",
+            "type"   => "html",
+            "data"   => (sprintf("<p><strong>Appaction successful</strong></p><ul>%s</ul>", $log))
+        };
+    }
+    return $result;
 }
 
-# Ugly workaround, FIXME remove soon
-sub _uglytable {
-    my $res = '<table class="Modac_Standard" style="width: 60%;"><thead><tr><th>App</th><th>Desc</th><th>Action</th></thead>';
-    my $apps = _applist();
-    while(my ($name, $status) = each %$apps) {
-        if ($status eq 'managed') {
-            my $detail = _appdetail($name);
-            $res .= '<tr>';
-            $res .= '<td>';
-            $res .= $name;
-            $res .= '</td>';
-            $res .= '<td>';
-            $res .= $detail->{description};
-            $res .= '</td>';
-            $res .= '<td>';
-            for my $action (keys %{$detail->{actions}}) {
-                $res .= '%BUTTON{"Action: ' . $action .'" href="%SCRIPTURLPATH{"rest"}%/AppManagerPlugin/appaction?name=' . $name . '&action=' . $action . '"}%';
-            }
-            $res .= '</td>';
-            $res .= '</tr>';
-        }
+# Return sha256 checksum of content of file.
+sub _hashfile {
+    my $file = shift;
+    open(my $fh, '<', $file);
+    local $/;
+    return Digest::SHA::sha256_hex(<$fh>);
+};
+
+# Install operations
+sub _installOperations {
+    my ($app, $appname, @bad) = @_;
+    die "Extra parameters in " . (caller(0))[3] if @bad;
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
+
+    my $conf = _getJSONConfig($app);
+    my $installname = $appname || $conf->{installname};
+    my @operations = @{$conf->{install}};
+    # Validate operations
+    if (((scalar @operations) % 3) != 0) {
+        return _texterror("Malformed install operations section in appconfig.json - number of entries must be divisible by three.");
     }
-    $res .= '<tr><td><b>Install all applications</b></td><td><b>Try to install all applications</b></td><td>%BUTTON{"Destroy Wiki" href="%SCRIPTURLPATH{"rest"}%/AppManagerPlugin/appaction?name=all&action=install"}%';
-    $res .= '</table>';
-    return $res;
+    for (my $i = 0; $i < scalar @operations; $i += 3) {
+        my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
+        # Substitute placeholders in pathes
+        map {
+            $_ =~ s/%INSTALLNAME%/$installname/ge;
+            $_ =~ s/%DATADIR%/$Foswiki::cfg{DataDir}/ge;
+            $_ =~ s/%PUBDIR%/$Foswiki::cfg{PubDir}/ge;
+        } ($src, $tar);
+        ($operations[$i], $operations[$i+1], $operations[$i+2]) = ($op, $src, $tar);
+    }
+    return @operations;
+}
+
+# Return text error.
+sub _texterror {
+    my ($msg, @bad) = @_;
+    die "Extra parameters in " . (caller(0))[3] if @bad;
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($msg);
+
+    return {
+        "result" => "error",
+        "type" => "text",
+        "data" => $msg
+    };
 }
 
 ## Registered handlers
 # Returns application details
 sub _RESTappdetail {
-    my($session, $subject, $verb, $response) = @_;
+    my ($session, $subject, $verb, $response) = @_;
     my $q = $session->{request};
     my $app = $q->param('name');
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
-        return encode_json({'error' => 'Only Admins are allowed to use this.'});
+        return encode_json(_texterror('Only Admins are allowed to use this.'));
+    } elsif (!$app) {
+        encode_json(_texterror('Parameter \'name\' is mandatory'));
+    } else {
+        return encode_json(_appdetail($app));
     }
-    unless ($app) { return {'error' => 'Parameter \'name\' is mandatory'}; }
-    return encode_json(_appdetail($app));
 }
 
 # Returns list of managed and unmanaged applications.
@@ -273,9 +331,10 @@ sub _RESTapplist {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
-        return encode_json({'error' => 'Only Admins are allowed to list installed applications.'});
+        return encode_json(_texterror('Only Admins are allowed to list installed applications.'));
+    } else {
+        return encode_json(_applist());
     }
-    return encode_json(_applist());
 }
 
 # RestHandler to execute action for app
@@ -288,23 +347,62 @@ sub _RESTappaction {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
-        return encode_json({'error' => 'Only Admins are allowed to execute actions.'});
+        return encode_json(_texterror('Only Admins are allowed to execute actions.'));
     }
-    unless ($name) { return encode_json({'error' => 'Parameter \'name\' is mandatory'}); }
-    unless ($action) { return encode_json({'error' => 'Parameter \'action\' is mandatory'}); }
+    unless ($name)   { return encode_json(_texterror('Parameter \'name\' is mandatory')); }
+    unless ($action) { return encode_json(_texterror('Parameter \'action\' is mandatory')); }
 
     # Check if action available
     if ((_appdetail($name)->{actions}->{$action}) || ($action eq 'install' && $name eq 'all')) {
         if ($action eq 'install') {
             return encode_json(_install($name));
+        } elsif ($action eq 'diff') {
+            return encode_json(_appdiff($name));
         } else {
-        return encode_json({'error' => 'Action available, but no method defined.'});
+        return encode_json(_texterror('Action available, but no method defined.'));
         }
     } else {
-        return encode_json({'error' => 'Action not available for app.'});
+        return encode_json(_texterror('Action not available for app.'));
     }
 }
 
+# Returns list of managed and unmanaged applications.
+sub _RESTinstallall {
+    my ($session, $subject, $verb, $response) = @_;
+
+    # This page is only visible for the admin user
+    if (!Foswiki::Func::isAnAdmin()) {
+        return encode_json(_texterror('Only Admins are allowed to install all applications.'));
+    } else {
+        # Try install routine for all managed apps
+        my @log = ();
+        my $error = 0;
+        my $applist = _applist();
+        while (my ($name, $status) = each %$applist) {
+            if ($status eq 'managed') {
+                my $detail = _appdetail($name);
+                if ($detail->{actions}->{install}) {
+                    my $res = _install($name);
+                    if ($res->{result} ne 'ok') {
+                        push @log, "Installation failed: $name";
+                        $error = 1;
+                    } else {
+                        push @log, "Installation succeeded: $name.";
+                    }
+                }
+            }
+        }
+        if ($error) {
+            return encode_json(_texterror(join(' ', ("Not all installations successful." ,@log))));
+        } else {
+            return encode_json({
+                "result" => "ok",
+                "type"   => "text",
+                "data"   => (join(' ', ("All installations successful." ,@log)))
+            });
+        }
+    }
+}
 
 1;
 
@@ -313,7 +411,7 @@ Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 
 Author: Andreas Hennes, Maik Glatki, Modell Aachen GmbH
 
-Copyright (C) 2015 Modell Aachen GmbH
+Copyright (C) 2015-2016 Modell Aachen GmbH
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License

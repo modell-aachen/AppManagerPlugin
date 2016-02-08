@@ -1,83 +1,77 @@
-(function(appDataObj) {
-	jQuery(document).ready(function() {
-		appManager.config();
-		appManager.loadTemplates();
+(function($) {
+  var restUrl = function(endPoint) {
+    return [
+      foswiki.getPreference('SCRIPTURL'),
+      '/rest',
+      foswiki.getPreference('SCRIPTSUFFIX'),
+      '/AppManagerPlugin/',
+      endPoint
+    ].join('');
+  };
 
-		var allTemplatesLoaded = setInterval(function() { 
-			if (
-					appManager.templates.singleAppContainerTmpl != '' &&
-					appManager.templates.singleAppActionsTmpl != ''
-				) {
-				clearInterval(allTemplatesLoaded);
-				jQuery.each(appManager.getDataObj(), function(key, value) {
-					appManager.createSingleAppContainer(appManager.templates.singleAppContainerTmpl, value);
-				});
-			}
-		}, 30);
-	});
+  var onManagedAppClicked = function() {
+    var id = $(this).attr('id');
+    var $actions = $('#appConfigActionsContent').empty();
 
-	/***** AppManager main object *****/
-	var appManager = {
-		/*********************************/
-		/***** AppManager attributes *****/
-		/*********************************/
-		_dataObj 					: {},
-		topParentElem 				: {},
-		templates 					: {
-			singleAppContainerTmpl 	: '',
-			singleAppActionsTmpl	: ''
-		},
+    $.blockUI();
+    $.get(restUrl('appdetail'), {name: id}, function(data, status, xhr) {
+      var details = $.parseJSON(data);
+      $('#appConfigDescriptionContent').empty().append(details.description);
 
-		/******************************/
-		/***** AppManager methods *****/
-		/******************************/
+      var $selectDiv = $('<div class="actionSelectContainer"></div>').appendTo($actions);
+      var $submitDiv = $('<div class="actionSubmitContainer"></div>').appendTo($actions);
+      $('<div class="clear"></div>').appendTo($actions);
 
-		config: function() {
-			this.setDataObj(window.appDataObj);
-			this.topParentElem = jQuery('#mainContainer');
-		},
+      var $select = $('<select></select>').appendTo($selectDiv);
+      $select.data('action-id', id);
+      $('<a class="action" href="#">Go</a>').appendTo($submitDiv);
 
-		/***** Create a container for a single application, displayed on the system topic *****/
-		createSingleAppContainer : function(template, obj) {
-			jQuery(this.topParentElem).append(template);
-			jQuery('.singleAppContainer:last').find('[replaceVal="appname"]').text(obj.appname);
-			jQuery('.singleAppContainer:last').find('[replaceVal="description"]').text(obj.description);
+      for (var action in details.actions) {
+        if (typeof details.actions[action] === "object") {
+          $('<option value="' + action + '">' + action  + '</option>').appendTo($select);
+        }
+      }
+    }).always($.unblockUI);
+  };
 
-			if (obj.actions.length > 0) {
-				jQuery('.singleAppContainer:last').find('.singleAppActionsNoContent').remove();
-				jQuery('.singleAppContainer:last').find('[replaceVal="actionsSelect"]').html(appManager.templates.singleAppActionsTmpl);
+  var onActionClicked = function() {
+    var $select = $(this).parent().children('select');
 
-				jQuery.each(obj.actions, function(key, value) {
-					jQuery('.singleAppContainer:last').find('.singleAppActionSelect').append('<option>' + value.name + '</option>');
-					jQuery('.singleAppContainer:last').find('.singleAppActionSelect option:last').data("meta", {desc : value.description});
-				});
-				jQuery('.singleAppContainer:last').find('.singleAppActionSelect').unbind().bind('change', function() {
-					var currentDesc = jQuery(this).find('option:selected').data("meta").desc;
-					jQuery(this).parent().parent().next().text(currentDesc);
-				});
-			} else {
-				jQuery('.singleAppContainer:last').find('.singleAppActionsContent').remove();
-			}
-		},
+    $.blockUI();
+    $.ajax({
+      method: 'POST',
+      url: restUrl('appaction'),
+      data: {
+        name: $select.data('action-id'),
+        action: $select.val()
+      }
+    }).done(function(data) {
+      var action = $.parseJSON(data);
+      // Show appaction results
+      if (action.type === "text") {
+        $("#appConfigActionsOutput").empty().text(action.data);
+      } else if (action.type == "html"){
+        $("#appConfigActionsOutput").empty().append(action.data);
+      }
+    }).always($.unblockUI);
 
-		/***** Loads all necessary templates *****/
-		loadTemplates : function() {
-			jQuery.get("AppManagerPluginTemplates?contenttype=text/plain&skin=text&section=singleAppContainer", function(data, textStatus, XMLHttpRequest) {
-				appManager.templates.singleAppContainerTmpl = data;
-			});
-			jQuery.get("AppManagerPluginTemplates?contenttype=text/plain&skin=text&section=singleAppActions", function(data, textStatus, XMLHttpRequest) {
-				appManager.templates.singleAppActionsTmpl = data;
-			});
-		},
+    return false;
+  };
 
-		/***** Set value for attribute _dataObj *****/
-		setDataObj : function(obj) {
-			this._dataObj = obj;
-		},
+  $(document).ready( function() {
+    $.blockUI();
+    $.get(restUrl('applist'), function(data, status, xhr) {
+      var apps = $.parseJSON(data);
+      var keys = Object.keys(apps).sort();
+      for (var i in keys ) {
+        var key = keys[i];
+        var type = apps[key];
+        var $div = $('<div class="' + type + 'AppContainer"></div>').attr('id', key).text(key);
+        $div.insertBefore($('#' + type + 'AppsContainer > .clear'));
+      };
 
-		/***** Get value for attribute _dataObj *****/
-		getDataObj : function() {
-			return this._dataObj;
-		}
-	};
-})();
+      $('#managedAppsContainer').on('click', '.managedAppContainer', onManagedAppClicked);
+      $('#appConfigActionsContent').on('click', 'a.action', onActionClicked)
+    }).always($.unblockUI);
+  });
+})(jQuery);
