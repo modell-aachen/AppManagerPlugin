@@ -35,7 +35,7 @@
   };
 
   var onActionClicked = function() {
-    var $select = $(this).parent().children('select');
+    var $select = $(this).closest('#appConfigActionsContent').find('select');
 
     $.blockUI();
     $.ajax({
