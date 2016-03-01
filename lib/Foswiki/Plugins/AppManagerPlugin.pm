@@ -317,12 +317,15 @@ sub _RESTappdetail {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to use this.'));
-    } elsif (!$app) {
-        encode_json(_texterror('Parameter \'name\' is mandatory'));
-    } else {
-        return encode_json(_appdetail($app));
     }
+
+    $response->header(-status => !$app ? 400 : 200);
+    return encode_json(
+        !$app
+            ? _texterror('Parameter \'name\' is mandatory')
+            : _appdetail($app));
 }
 
 # Returns list of managed and unmanaged applications.
@@ -331,10 +334,10 @@ sub _RESTapplist {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to list installed applications.'));
-    } else {
-        return encode_json(_applist());
     }
+    return encode_json(_applist());
 }
 
 # RestHandler to execute action for app
@@ -347,23 +350,29 @@ sub _RESTappaction {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to execute actions.'));
     }
-    unless ($name)   { return encode_json(_texterror('Parameter \'name\' is mandatory')); }
-    unless ($action) { return encode_json(_texterror('Parameter \'action\' is mandatory')); }
+    unless ($name)   {
+        $response->header(-status => 400);
+        return encode_json(_texterror('Parameter \'name\' is mandatory'));
+    }
+    unless ($action) {
+        $response->header(-status => 400);
+        return encode_json(_texterror('Parameter \'action\' is mandatory'));
+    }
 
     # Check if action available
     if ((_appdetail($name)->{actions}->{$action}) || ($action eq 'install' && $name eq 'all')) {
-        if ($action eq 'install') {
-            return encode_json(_install($name));
-        } elsif ($action eq 'diff') {
-            return encode_json(_appdiff($name));
-        } else {
+        return encode_json(_install($name)) if $action eq 'install';
+        return encode_json(_appdiff($name)) if $action eq 'diff';
+
+        $response->header(-status => 400);
         return encode_json(_texterror('Action available, but no method defined.'));
-        }
-    } else {
-        return encode_json(_texterror('Action not available for app.'));
     }
+
+    $response->header(-status => 400);
+    return encode_json(_texterror('Action not available for app.'));
 }
 
 # Returns list of managed and unmanaged applications.
@@ -372,36 +381,37 @@ sub _RESTinstallall {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to install all applications.'));
-    } else {
-        # Try install routine for all managed apps
-        my @log = ();
-        my $error = 0;
-        my $applist = _applist();
-        while (my ($name, $status) = each %$applist) {
-            if ($status eq 'managed') {
-                my $detail = _appdetail($name);
-                if ($detail->{actions}->{install}) {
-                    my $res = _install($name);
-                    if ($res->{result} ne 'ok') {
-                        push @log, "Installation failed: $name";
-                        $error = 1;
-                    } else {
-                        push @log, "Installation succeeded: $name.";
-                    }
+    }
+    # Try install routine for all managed apps
+    my @log = ();
+    my $error = 0;
+    my $applist = _applist();
+    while (my ($name, $status) = each %$applist) {
+        if ($status eq 'managed') {
+            my $detail = _appdetail($name);
+            if ($detail->{actions}->{install}) {
+                my $res = _install($name);
+                if ($res->{result} ne 'ok') {
+                    push @log, "Installation failed: $name";
+                    $error = 1;
+                } else {
+                    push @log, "Installation succeeded: $name.";
                 }
             }
         }
-        if ($error) {
-            return encode_json(_texterror(join(' ', ("Not all installations successful." ,@log))));
-        } else {
-            return encode_json({
-                "result" => "ok",
-                "type"   => "text",
-                "data"   => (join(' ', ("All installations successful." ,@log)))
-            });
-        }
     }
+    if ($error) {
+        $response->header(-status => 500);
+        return encode_json(_texterror(join(' ', ("Not all installations successful." ,@log))));
+    }
+
+    return encode_json({
+        "result" => "ok",
+        "type"   => "text",
+        "data"   => (join(' ', ("All installations successful." ,@log)))
+    });
 }
 
 1;
