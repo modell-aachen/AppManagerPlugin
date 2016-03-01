@@ -82,7 +82,8 @@ sub _appdetail  {
 
 # Returns list of managed and unmanaged applications.
 sub _applist {
-    my @topicList = grep {/AppContrib$/} Foswiki::Func::getTopicList('System');
+    my $regex = $Foswiki::cfg{Plugins}{AppManagerPlugin}{AppRegExp} || '(App|Content)Contrib$';
+    my @topicList = grep {/$regex/} Foswiki::Func::getTopicList('System');
 
     my $applist = {};
     for my $app (@topicList) {
