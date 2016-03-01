@@ -217,6 +217,7 @@ sub _install {
     if (exists $args->{mode}) {
         $mode = $args->{mode};
     }
+
     my @operations = _installOperations($app, $installname);
     # Return notices
     my @log = ();
@@ -230,16 +231,57 @@ sub _install {
         }
         push @log, "Run: $pass";
         # Iterate all install routines;
-        for (my $i = 0; $i < scalar @operations; $i += 3) {
-            my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
-            if ($op eq 'move') {
-                # Check existance of source and target files
+        foreach my $ops (@operations) {
+            if ($ops->{action} eq 'move') {
+                my $src = $ops->{from};
+                my $tar = $ops->{to};
+
+                unless ($src && $tar) {
+                    $error = 1;
+                    push @log, "Missing parameter 'from' and/or 'to'!";
+                }
+
                 push @log, "Move $src to $tar";
                 if ($pass eq 'check') {
                     if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
                     if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
                 } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
                     File::Copy::move($src, $tar);
+                }
+            }
+
+            if ($ops->{action} eq 'replace_text') {
+                my $regexp = $ops->{pattern};
+                my $text = $ops->{text};
+                my $topics = $ops->{topics};
+                unless ($regexp && $text) {
+                    $error = 1;
+                    push @log, "Missing parameter 'pattern' and/or 'text'!";
+                }
+
+                # We're unable to to replace anything during action 'check'.
+                # The destination might not exist yet.
+                next if $pass eq 'check';
+
+                foreach my $t (@$topics) {
+                    my ($web, $topic) = Foswiki::Func::normalizeWebTopicName(undef, $t);
+                    unless (Foswiki::Func::topicExists($web, $topic)) {
+                        $error = 1;
+                        push @log, "$web.$topic doesn't exist!";
+                        next;
+                    }
+
+                    my ($meta) = Foswiki::Func::readTopic($web, $topic);
+                    my $contents = Foswiki::Serialise::serialise($meta, 'Embedded');
+                    $contents =~ s/$regexp/$text/gm;
+
+                    if (($pass eq 'install' && !$error) || $pass eq 'forceinstall') {
+                        $meta = Foswiki::Meta->new($meta->session, $web, $topic);
+                        Foswiki::Serialise::deserialise($contents, 'Embedded', $meta);
+                        $meta->save({dontlog => 1, minor => 1, nohandlers => 1});
+                    }
+
+                    $meta->finish();
                 }
             }
         }
@@ -270,6 +312,18 @@ sub _hashfile {
     return Digest::SHA::sha256_hex(<$fh>);
 };
 
+sub _replacePlaceholder {
+    my $installname = shift;
+    my $data = $Foswiki::cfg{DataDir};
+    my $pub = $Foswiki::cfg{PubDir};
+
+    map {
+        $_ =~ s/%INSTALLNAME%/$installname/g;
+        $_ =~ s/%DATADIR%/$data/g;
+        $_ =~ s/%PUBDIR%/$pub/g;
+    } @_;
+}
+
 # Install operations
 sub _installOperations {
     my ($app, $appname, @bad) = @_;
@@ -279,20 +333,15 @@ sub _installOperations {
     my $conf = _getJSONConfig($app);
     my $installname = $appname || $conf->{installname};
     my @operations = @{$conf->{install}};
-    # Validate operations
-    if (((scalar @operations) % 3) != 0) {
-        return _texterror("Malformed install operations section in appconfig.json - number of entries must be divisible by three.");
-    }
-    for (my $i = 0; $i < scalar @operations; $i += 3) {
-        my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
-        # Substitute placeholders in pathes
-        map {
-            $_ =~ s/%INSTALLNAME%/$installname/ge;
-            $_ =~ s/%DATADIR%/$Foswiki::cfg{DataDir}/ge;
-            $_ =~ s/%PUBDIR%/$Foswiki::cfg{PubDir}/ge;
-        } ($src, $tar);
-        ($operations[$i], $operations[$i+1], $operations[$i+2]) = ($op, $src, $tar);
-    }
+
+    foreach my $ops (@operations) {
+        if ($ops->{action} eq 'move') {
+            _replacePlaceholder($installname, $ops->{from}, $ops->{to});
+        } elsif ($ops->{action} eq 'replace_text') {
+            _replacePlaceholder($installname, $ops->{pattern}, $ops->{text}, @{$ops->{topics}});
+        }
+    };
+
     return @operations;
 }
 

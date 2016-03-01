@@ -51,11 +51,20 @@ Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Fosw
     "appname": "MyAppContrib",
     "description": "<nop>%SHORTDESCRIPTION%</nop>",
     "installname": "MyApp",
-    "install": [
-            "move", "%DATADIR%data/_apps/MyApp", "%DATADIR%/%INSTALLNAME%"
-            ]
-        }
-    ]
+    "install": [{
+      "action": "move",
+      "from": "%DATADIR%/_apps/MyApp",
+      "to": "%DATADIR%/%INSTALLNAME%"
+    },
+    {
+      "action": "replace_text",
+      "pattern": "^%META:FORM\\{name=\"MyForm\"\\}%",
+      "text": "%META:FORM{name=\"%INSTALLNAME%.MyForm\"}%",
+      "topics": [
+        "%INSTALLNAME%.MyFirstTemplate",
+        "%INSTALLNAME%.MySecondTemplate"
+      ]
+    }]
 }
 </pre>
 
@@ -66,10 +75,15 @@ Available variables:
    * =%PUBDIR%=: Will be replaced with, Foswiki {PubDir}.
 
 ---++++ Action: install
-The install field contains all information for the execution of the move action. The move command in the insta
-   * _move_: Ordered list of key-value pairs
-      * key: source file or directory.
-      * value: target file or directory.
+The =install array= contains all information for the execution of the =move= and =replace_text= actions.
+
+   * =move=
+      * from: Source file or directory.
+      * to: Target file or directory.
+   * =replace_text=
+      * pattern: Perl regular expression string
+      * text: The text to replace the matched text with
+      * topics: Array of topics (in webtopic syntax) to include within the search
 
 ---+++ REST handlers
 
