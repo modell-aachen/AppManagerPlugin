@@ -82,7 +82,8 @@ sub _appdetail  {
 
 # Returns list of managed and unmanaged applications.
 sub _applist {
-    my @topicList = grep {/AppContrib$/} Foswiki::Func::getTopicList('System');
+    my $regex = $Foswiki::cfg{Plugins}{AppManagerPlugin}{AppRegExp} || '(App|Content)Contrib$';
+    my @topicList = grep {/$regex/} Foswiki::Func::getTopicList('System');
 
     my $applist = {};
     for my $app (@topicList) {
@@ -216,6 +217,7 @@ sub _install {
     if (exists $args->{mode}) {
         $mode = $args->{mode};
     }
+
     my @operations = _installOperations($app, $installname);
     # Return notices
     my @log = ();
@@ -229,16 +231,57 @@ sub _install {
         }
         push @log, "Run: $pass";
         # Iterate all install routines;
-        for (my $i = 0; $i < scalar @operations; $i += 3) {
-            my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
-            if ($op eq 'move') {
-                # Check existance of source and target files
+        foreach my $ops (@operations) {
+            if ($ops->{action} eq 'move') {
+                my $src = $ops->{from};
+                my $tar = $ops->{to};
+
+                unless ($src && $tar) {
+                    $error = 1;
+                    push @log, "Missing parameter 'from' and/or 'to'!";
+                }
+
                 push @log, "Move $src to $tar";
                 if ($pass eq 'check') {
                     if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
                     if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
                 } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
                     File::Copy::move($src, $tar);
+                }
+            }
+
+            if ($ops->{action} eq 'replace_text') {
+                my $regexp = $ops->{pattern};
+                my $text = $ops->{text};
+                my $topics = $ops->{topics};
+                unless ($regexp && $text) {
+                    $error = 1;
+                    push @log, "Missing parameter 'pattern' and/or 'text'!";
+                }
+
+                # We're unable to to replace anything during action 'check'.
+                # The destination might not exist yet.
+                next if $pass eq 'check';
+
+                foreach my $t (@$topics) {
+                    my ($web, $topic) = Foswiki::Func::normalizeWebTopicName(undef, $t);
+                    unless (Foswiki::Func::topicExists($web, $topic)) {
+                        $error = 1;
+                        push @log, "$web.$topic doesn't exist!";
+                        next;
+                    }
+
+                    my ($meta) = Foswiki::Func::readTopic($web, $topic);
+                    my $contents = Foswiki::Serialise::serialise($meta, 'Embedded');
+                    $contents =~ s/$regexp/$text/gm;
+
+                    if (($pass eq 'install' && !$error) || $pass eq 'forceinstall') {
+                        $meta = Foswiki::Meta->new($meta->session, $web, $topic);
+                        Foswiki::Serialise::deserialise($contents, 'Embedded', $meta);
+                        $meta->save({dontlog => 1, minor => 1, nohandlers => 1});
+                    }
+
+                    $meta->finish();
                 }
             }
         }
@@ -269,6 +312,18 @@ sub _hashfile {
     return Digest::SHA::sha256_hex(<$fh>);
 };
 
+sub _replacePlaceholder {
+    my $installname = shift;
+    my $data = $Foswiki::cfg{DataDir};
+    my $pub = $Foswiki::cfg{PubDir};
+
+    map {
+        $_ =~ s/%INSTALLNAME%/$installname/g;
+        $_ =~ s/%DATADIR%/$data/g;
+        $_ =~ s/%PUBDIR%/$pub/g;
+    } @_;
+}
+
 # Install operations
 sub _installOperations {
     my ($app, $appname, @bad) = @_;
@@ -278,20 +333,15 @@ sub _installOperations {
     my $conf = _getJSONConfig($app);
     my $installname = $appname || $conf->{installname};
     my @operations = @{$conf->{install}};
-    # Validate operations
-    if (((scalar @operations) % 3) != 0) {
-        return _texterror("Malformed install operations section in appconfig.json - number of entries must be divisible by three.");
-    }
-    for (my $i = 0; $i < scalar @operations; $i += 3) {
-        my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
-        # Substitute placeholders in pathes
-        map {
-            $_ =~ s/%INSTALLNAME%/$installname/ge;
-            $_ =~ s/%DATADIR%/$Foswiki::cfg{DataDir}/ge;
-            $_ =~ s/%PUBDIR%/$Foswiki::cfg{PubDir}/ge;
-        } ($src, $tar);
-        ($operations[$i], $operations[$i+1], $operations[$i+2]) = ($op, $src, $tar);
-    }
+
+    foreach my $ops (@operations) {
+        if ($ops->{action} eq 'move') {
+            _replacePlaceholder($installname, $ops->{from}, $ops->{to});
+        } elsif ($ops->{action} eq 'replace_text') {
+            _replacePlaceholder($installname, $ops->{pattern}, $ops->{text}, @{$ops->{topics}});
+        }
+    };
+
     return @operations;
 }
 
@@ -317,12 +367,15 @@ sub _RESTappdetail {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to use this.'));
-    } elsif (!$app) {
-        encode_json(_texterror('Parameter \'name\' is mandatory'));
-    } else {
-        return encode_json(_appdetail($app));
     }
+
+    $response->header(-status => !$app ? 400 : 200);
+    return encode_json(
+        !$app
+            ? _texterror('Parameter \'name\' is mandatory')
+            : _appdetail($app));
 }
 
 # Returns list of managed and unmanaged applications.
@@ -331,10 +384,10 @@ sub _RESTapplist {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to list installed applications.'));
-    } else {
-        return encode_json(_applist());
     }
+    return encode_json(_applist());
 }
 
 # RestHandler to execute action for app
@@ -347,23 +400,29 @@ sub _RESTappaction {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to execute actions.'));
     }
-    unless ($name)   { return encode_json(_texterror('Parameter \'name\' is mandatory')); }
-    unless ($action) { return encode_json(_texterror('Parameter \'action\' is mandatory')); }
+    unless ($name)   {
+        $response->header(-status => 400);
+        return encode_json(_texterror('Parameter \'name\' is mandatory'));
+    }
+    unless ($action) {
+        $response->header(-status => 400);
+        return encode_json(_texterror('Parameter \'action\' is mandatory'));
+    }
 
     # Check if action available
     if ((_appdetail($name)->{actions}->{$action}) || ($action eq 'install' && $name eq 'all')) {
-        if ($action eq 'install') {
-            return encode_json(_install($name));
-        } elsif ($action eq 'diff') {
-            return encode_json(_appdiff($name));
-        } else {
+        return encode_json(_install($name)) if $action eq 'install';
+        return encode_json(_appdiff($name)) if $action eq 'diff';
+
+        $response->header(-status => 400);
         return encode_json(_texterror('Action available, but no method defined.'));
-        }
-    } else {
-        return encode_json(_texterror('Action not available for app.'));
     }
+
+    $response->header(-status => 400);
+    return encode_json(_texterror('Action not available for app.'));
 }
 
 # Returns list of managed and unmanaged applications.
@@ -372,36 +431,37 @@ sub _RESTinstallall {
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to install all applications.'));
-    } else {
-        # Try install routine for all managed apps
-        my @log = ();
-        my $error = 0;
-        my $applist = _applist();
-        while (my ($name, $status) = each %$applist) {
-            if ($status eq 'managed') {
-                my $detail = _appdetail($name);
-                if ($detail->{actions}->{install}) {
-                    my $res = _install($name);
-                    if ($res->{result} ne 'ok') {
-                        push @log, "Installation failed: $name";
-                        $error = 1;
-                    } else {
-                        push @log, "Installation succeeded: $name.";
-                    }
+    }
+    # Try install routine for all managed apps
+    my @log = ();
+    my $error = 0;
+    my $applist = _applist();
+    while (my ($name, $status) = each %$applist) {
+        if ($status eq 'managed') {
+            my $detail = _appdetail($name);
+            if ($detail->{actions}->{install}) {
+                my $res = _install($name);
+                if ($res->{result} ne 'ok') {
+                    push @log, "Installation failed: $name";
+                    $error = 1;
+                } else {
+                    push @log, "Installation succeeded: $name.";
                 }
             }
         }
-        if ($error) {
-            return encode_json(_texterror(join(' ', ("Not all installations successful." ,@log))));
-        } else {
-            return encode_json({
-                "result" => "ok",
-                "type"   => "text",
-                "data"   => (join(' ', ("All installations successful." ,@log)))
-            });
-        }
     }
+    if ($error) {
+        $response->header(-status => 500);
+        return encode_json(_texterror(join(' ', ("Not all installations successful." ,@log))));
+    }
+
+    return encode_json({
+        "result" => "ok",
+        "type"   => "text",
+        "data"   => (join(' ', ("All installations successful." ,@log)))
+    });
 }
 
 1;
