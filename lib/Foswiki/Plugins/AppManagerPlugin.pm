@@ -12,6 +12,7 @@ use Foswiki::Plugins ();
 use Carp;
 require File::Spec;
 require File::Copy;
+require File::Copy::Recursive;
 require Digest::SHA;
 
 # Extra modules
@@ -246,7 +247,13 @@ sub _install {
                     if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
                     if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
                 } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
-                    File::Copy::move($src, $tar);
+                    if ($args->{copy}) {
+                        no warnings 'once';
+                        local $File::Copy::Recursive::CopyLink = 0;
+                        File::Copy::Recursive::rcopy($src, $tar);
+                    } else {
+                        File::Copy::move($src, $tar);
+                    }
                 }
             }
 
