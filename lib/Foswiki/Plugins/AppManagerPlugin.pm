@@ -285,7 +285,7 @@ sub _install {
                     if (($pass eq 'install' && !$error) || $pass eq 'forceinstall') {
                         $meta = Foswiki::Meta->new($meta->session, $web, $topic);
                         Foswiki::Serialise::deserialise($contents, 'Embedded', $meta);
-                        $meta->save({dontlog => 1, minor => 1, nohandlers => 1});
+                        $meta->save(dontlog => 1, minor => 1, nohandlers => 1);
                     }
 
                     $meta->finish();
