@@ -6,12 +6,14 @@ use warnings;
 
 # Foswiki modules
 use Foswiki::Func    ();
+use Foswiki::Meta    ();
 use Foswiki::Plugins ();
 
 # Core modules
 use Carp;
 require File::Spec;
 require File::Copy;
+require File::Copy::Recursive;
 require Digest::SHA;
 
 # Extra modules
@@ -104,51 +106,85 @@ sub _appdiff {
 
     # Get operations
     my $result = '';
+    my $diff;
     my @operations = _installOperations($app, $appname);
-    for (my $i = 0; $i < scalar @operations; $i += 3) {
-        my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
-        # Compare entries.
-        my $msg = '';
-        if (! -e $src) { $msg = "Source file or directory does not exist"; }
-        elsif ( -d $src && -f $tar) { $msg =  "Source is a directory, but target is a file. This is most likely bad."; }
-        elsif ( -f $src && -d $tar) { $msg =  "Source is a file, but target is a directory. This is most likely bad."; }
-        elsif (( -f $src && -f $tar) && (_hashfile($src) ne _hashfile($tar))) { $msg = "Source file and target file have different content"; }
-        elsif ( -d $src && -d $tar) { # Compare directories
-            my ($srcdh, $tardh);
-            unless (opendir($srcdh, $src)) { $msg = "Could not open source directory"; }
-            unless (opendir($tardh, $tar)) { $msg = "Could not open target directory"; }
-            unless ($msg) {
-                # Compile unified list of readdir entries
-                $msg .= "Both directories: $src, $tar. Differences:<ul>";
-                my $list = {};
-                map {$list->{$_} = 1;} grep {(!/^\./ && !/,pfv$/)} (readdir($srcdh), readdir($tardh));
-                closedir($srcdh);
-                closedir($tardh);
-                for my $item (sort keys %$list) {
-                    my ($srcitem, $taritem) = (File::Spec->catfile($src, $item), File::Spec->catfile($tar, $item));
-                    if    (! -e $srcitem) { $msg .= "<li>$item only in target directory</li>"; }
-                    elsif (! -e $taritem) { $msg .= "<li>$item only in source directory</li>"; }
-                    # If both files/directories exists, compare
-                    if ( -e $srcitem && -e $taritem) {
-                        if ( -d $srcitem && -f $taritem) { $msg .=  "<li>$item is directory in source, but file in target directory. This is most likely bad.</li>"; }
-                        elsif ( -f $srcitem && -d $taritem) { $msg .=  "<li>$item is file in source, but directory in target directory. This is most likely bad.</li>"; }
-                        elsif ( -f $srcitem && -f $taritem && (_hashfile($srcitem) ne _hashfile($taritem))) { $msg .= "<li>$item: Source file and target file have different content</li>"; }
-                        elsif ( -d $srcitem && -d $taritem) { $msg .= "<li>$item is a directory in both source and target. Comparison of subdirectories currently not implemented.</li>"; }
-                    }
-                }
-                $msg .= '</ul>';
+    foreach my $ops (@operations) {
+        if ($ops->{action} eq 'move') {
+            my $op = $ops->{action};
+            my $src = $ops->{from};
+            my $tar = $ops->{to};
+            #my ($op, $src, $tar) = ($operations[$i], $operations[$i+1], $operations[$i+2]);
+            # Compare entries.
+            my $msg = '';
+            if (! -e $src) { $msg = "Source file ($src) or directory does not exist"; }
+            elsif ( -d $src && -f $tar) { $msg =  "Source is a directory, but target is a file. This is most likely bad."; }
+            elsif ( -f $src && -d $tar) { $msg =  "Source is a file, but target is a directory. This is most likely bad."; }
+            elsif (( -f $src && -f $tar) && (_hashfile($src) ne _hashfile($tar))) { 
+                                $msg = _getFileDiff($src, $tar);
             }
-        } elsif ( -d $src && (! -e $tar)) {
-            $msg = "Target directory $tar does not exist. This ist not an error.";
+            elsif ( -d $src && -d $tar) { # Compare directories
+                my ($srcdh, $tardh);
+                unless (opendir($srcdh, $src)) { $msg = "Could not open source directory"; }
+                unless (opendir($tardh, $tar)) { $msg = "Could not open target directory"; }
+                unless ($msg) {
+                    # Compile unified list of readdir entries
+                    $msg .= "Both directories: $src, $tar. Differences:<ul>";
+                    my $list = {};
+                    map {$list->{$_} = 1;} grep {(!/^\./ && !/,pfv$/)} (readdir($srcdh), readdir($tardh));
+                    closedir($srcdh);
+                    closedir($tardh);
+                    for my $item (sort keys %$list) {
+                        my ($srcitem, $taritem) = (File::Spec->catfile($src, $item), File::Spec->catfile($tar, $item));
+                        if    (! -e $srcitem) { $msg .= "<li>$item only in target directory</li>"; }
+                        elsif (! -e $taritem) { $msg .= "<li>$item only in source directory</li>"; }
+                        # If both files/directories exists, compare
+                        if ( -e $srcitem && -e $taritem) {
+                            if ( -d $srcitem && -f $taritem) { $msg .=  "<li>$item is directory in source, but file in target directory. This is most likely bad.</li>"; }
+                            elsif ( -f $srcitem && -d $taritem) { $msg .=  "<li>$item is file in source, but directory in target directory. This is most likely bad.</li>"; }
+                            elsif ( -f $srcitem && -f $taritem && (_hashfile($srcitem) ne _hashfile($taritem))) {
+                                $msg .= _getFileDiff($srcitem, $taritem, $item);
+                            }
+                            elsif ( -d $srcitem && -d $taritem) { $msg .= "<li>$item is a directory in both source and target. Comparison of subdirectories currently not implemented.</li>"; }
+                        }
+                    }
+                    $msg .= '</ul>';
+                }
+            } elsif ( -d $src && (! -e $tar)) {
+                $msg = "Target directory $tar does not exist. This ist not an error.";
+            }
+            # Compile result of operation, if messages found
+            if ($msg) { $result .= sprintf("<p><strong>%s %s %s</strong></p>%s %s", $op, $src, $tar, $msg, $diff); }
+            my $meta = Foswiki::Meta->new($Foswiki::Plugins::SESSION, 'Main', 'WebHome');
+            $result = $meta->expandMacros($result);
+            $result .= "<b> To see a Diff install Perl Text::Diff and Text::Diff::HTML</b>" unless eval{ require Text::Diff; };
         }
-        # Compile result of operation, if messages found
-        if ($msg) { $result .= sprintf("<p><strong>%s %s %s</strong></p>%s", $op, $src, $tar, $msg); }
     }
     return {
         "result" => "ok",
         "type" => "html",
         "data" => $result
     };
+}
+
+# Get File diff as Twisty...
+sub _getFileDiff {
+    my ($srcitem, $taritem, $item) = @_;
+    my $msg;
+    $item .= $item ? ":": "";
+    eval { require Text::Diff; };
+    if (!$@){
+        eval { require Text::Diff::HTML; };
+        if (!$@){
+            open(my $srcfh, "<:encoding(UTF-8)", $srcitem );
+            open(my $tarfh, "<:encoding(UTF-8)", $taritem );
+            $msg .= "%TWISTY{link=\"<li>$item Source file and target file have different content</li>\"}%<verbatim>";
+            $msg .= Text::Diff::diff($srcfh,$tarfh, { STYLE => 'Text::Diff::HTML'});
+            $msg .= "</verbatim>%ENDTWISTY%";
+        }
+    } else {
+        $msg .= "<li>$item Source file and target file have different content</li>";
+    }
+    return $msg;
 }
 
 # Check for existing JSON file. Return undef on error.
@@ -246,7 +282,13 @@ sub _install {
                     if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
                     if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
                 } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
-                    File::Copy::move($src, $tar);
+                    if ($args->{copy}) {
+                        no warnings 'once';
+                        local $File::Copy::Recursive::CopyLink = 0;
+                        File::Copy::Recursive::rcopy($src, $tar);
+                    } else {
+                        File::Copy::move($src, $tar);
+                    }
                 }
             }
 
@@ -278,7 +320,7 @@ sub _install {
                     if (($pass eq 'install' && !$error) || $pass eq 'forceinstall') {
                         $meta = Foswiki::Meta->new($meta->session, $web, $topic);
                         Foswiki::Serialise::deserialise($contents, 'Embedded', $meta);
-                        $meta->save({dontlog => 1, minor => 1, nohandlers => 1});
+                        $meta->save(dontlog => 1, minor => 1, nohandlers => 1);
                     }
 
                     $meta->finish();
