@@ -2,19 +2,28 @@
     clear: both;
 }
 #mainContainer {
-
+    position: relative;
+    min-height: 500px;
 }
 #appMainContainer {
-    float: left;
-    border-right: 2px dotted #333;
+    display: inline-block;
+    position: relative;
+    vertical-align: top;
     width: 55%;
     padding: 10px;
 }
+
 #appConfigContainer {
-    float: left;
-    padding: 0 10px;
+    display: inline-block;
+    position: relative;
+    vertical-align: top;
+    background-color: #fff;
+    border: 1px solid #eee;
+    margin-left: 20px;
+    margin-top: 60px;
     width: 40%;
 }
+
 #managedAppsHeader {
     font-size: 20px;
     font-weight: bold;
@@ -88,10 +97,7 @@
     padding: 10px;
 }
 #appConfigActionsOutput {
-    padding: 10px;
-}
-.actionSelectContainer {
-    float: left;
+    padding: 10px 10px 0 10px;
 }
 .actionSelectContainer select {
     border: 1px solid #ddd;
@@ -102,16 +108,12 @@
     width: 200px;
 }
 .actionSubmitContainer {
-    float: left;
-    margin: 0 0 0 20px;
+    margin-top: 10px;
 }
 .actionSubmitContainer a {
-    -moz-user-select: none;
     background-color: #286090;
-    background-image: none;
-    border: 1px solid #122b40;
+    border: 1px solid #286090;
     border-radius: 4px;
-    color: #fff;
     cursor: pointer;
     display: inline-block;
     font-size: 14px;
@@ -123,16 +125,96 @@
     vertical-align: middle;
     white-space: nowrap;
     width: 100px;
+    transition: background-color .2s ease-out,
+                border-color .2s ease-out,
+                color .2s ease-out;
 }
-.actionSubmitContainer a:hover {
-    background-color: #286090;
-    background-image: none;
-    border: 1px solid #122b40;
+.actionSubmitContainer a:hover,
+.actionSubmitContainer a:active,
+.actionSubmitContainer a:focus {
+    background-color: #3a88c9;
+    border-color: #3a88c9;
     text-decoration: none;
     color: #fff;
 }
+.actionSubmitContainer a.btn-go {
+    color: #fff;
+}
+
 .file span { display: block; }
 .file .fileheader, .file .hunkheader {color: #888; }
 .file .hunk .ctx { background: #eee;}
 .file .hunk ins { background: #dfd; text-decoration: none; display: block; }
 .file .hunk del { background: #fdd; text-decoration: none; display: block; }
+
+.label {
+  display: inline-block;
+  padding: 2px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: default;
+  border-radius: 4px;
+  color: #fefefe;
+}
+.label.installed {
+    background: #3adb76;
+}
+.label.uninstalled {
+    background: #ec5840;
+}
+
+.callout {
+  margin: 0 0 1rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(10, 10, 10, 0.25);
+  border-radius: 0;
+  position: relative;
+  color: #0a0a0a;
+  background-color: white;
+}
+.callout > :first-child {
+    margin-top: 0;
+}
+.callout > :last-child {
+    margin-bottom: 0;
+}
+.callout.success {
+    background-color: #e1faea;
+}
+.callout.alert {
+    background-color: #fce6e2;
+}
+.callout.small {
+    padding-top: 0.5rem;
+    padding-right: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+.close-button {
+  position: absolute;
+  color: #8a8a8a;
+  right: 1rem;
+  top: 0.5rem;
+  font-size: 2em;
+  line-height: 1;
+  cursor: pointer; }
+[data-whatinput='mouse'] .close-button {
+    outline: 0;
+}
+.close-button:hover, .close-button:focus {
+    color: #0a0a0a;
+}
+
+label[for="paramFrom"],
+label[for="paramTo"] {
+    display: inline-block;
+    min-width: 100px;
+}
+
+#paramFrom, #paramTo {
+    border: 1px solid #777;
+    border-radius: 3px;
+    padding: 2px;
+}
