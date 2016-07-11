@@ -636,7 +636,7 @@ sub _RESTinstallall {
         if ($status eq 'managed') {
             my $detail = _appdetail($name);
             if ($detail->{actions}->{install}) {
-                my $res = _install($name);
+                my $res = _install($name, {move => 1});
                 if ($res->{result} ne 'ok') {
                     push @log, "Installation failed: $name";
                     $error = 1;
