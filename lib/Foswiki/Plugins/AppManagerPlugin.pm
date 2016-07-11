@@ -349,8 +349,8 @@ sub _install {
                 my $src = $ops->{from};
                 my $tar = $ops->{to};
 
-                my $links = decode_json($args->{links});
-                my $copies = decode_json($args->{copies});
+                my $links = decode_json($args->{links} || "[]");
+                my $copies = decode_json($args->{copies} || "[]");
 
                 unless ($src && $tar) {
                     $error = 1;
