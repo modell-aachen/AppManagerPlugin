@@ -321,12 +321,15 @@ sub _install {
     }
     my $installname = '';
     my $mode = 'install';
-    if (exists $args->{installname} || exists $conf->{installname}) {
-        $installname = $args->{installname} || $conf->{installname};
+    if (exists $args->{to} || exists $args->{installname} || exists $conf->{installname}) {
+        $installname = $args->{to} || $args->{installname} || $conf->{installname};
     }
     if (exists $args->{mode}) {
         $mode = $args->{mode};
     }
+
+    my $dataDir = $Foswiki::cfg{DataDir};
+    my $pubDir = $Foswiki::cfg{PubDir};
 
     my @operations = _installOperations($app, $installname);
     # Return notices
@@ -343,19 +346,11 @@ sub _install {
         # Iterate all install routines;
         foreach my $ops (@operations) {
             if ($ops->{action} eq 'move') {
-                my $src = $args->{from} || $ops->{from};
-                my $tar = $args->{to} || $ops->{to};
-                my $webname = $args->{to};
+                my $src = $ops->{from};
+                my $tar = $ops->{to};
+
                 my $links = decode_json($args->{links});
                 my $copies = decode_json($args->{copies});
-
-                my $dataDir = $Foswiki::cfg{DataDir};
-                unless ($tar =~ /^$dataDir/) {
-                    $tar = "$dataDir/$tar";
-                }
-                unless ($src =~ /^$dataDir/) {
-                    $src = "$dataDir/$src";
-                }
 
                 unless ($src && $tar) {
                     $error = 1;
@@ -363,9 +358,9 @@ sub _install {
                 }
 
                 push @log, "Move $src to $tar";
-                if ($pass eq 'check') {
+                if ($pass eq 'check' && !$args->{linkpartial}) {
                     if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
-                    if ( -e $tar && !$args->{linkpartial})  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
+                    if (-e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
                 } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
                     my $history = _readHistory($app);
                     if ($args->{copy}) {
@@ -377,8 +372,18 @@ sub _install {
                     } elsif ($args->{link}) {
                         symlink $src, $tar;
                     } elsif ($args->{linkpartial}) {
-                        unless (Foswiki::Func::webExists($webname)) {
-                            Foswiki::Func::createWeb($webname);
+                        unless (Foswiki::Func::webExists($installname)) {
+                            Foswiki::Func::createWeb($installname);
+                        }
+
+                        $tar = $args->{to};
+                        unless ($tar =~ /^$dataDir/) {
+                            $tar = "$dataDir/$tar";
+                        }
+
+                        $src = $args->{from};
+                        unless ($src =~ /^$dataDir/) {
+                            $src = "$dataDir/$src";
                         }
 
                         foreach my $topic (@{$links}) {
@@ -396,10 +401,11 @@ sub _install {
 
                     unless ($args->{linkpartial}) {
                         $tar =~ s/^$dataDir\///;
+                        $tar =~ s/^$pubDir\///;
                         push @{$history->{$args->{link} ? 'linked' : 'installed'}}, $tar;
                     } else {
-                        push @{$history->{partials}->{$webname}}, @{$links};
-                        push @{$history->{partials}->{$webname}}, @{$copies};
+                        push @{$history->{partials}->{$installname}}, @{$links};
+                        push @{$history->{partials}->{$installname}}, @{$copies};
                     }
 
                     _writeHistory($app, $history);
