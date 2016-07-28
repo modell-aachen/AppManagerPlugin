@@ -377,17 +377,29 @@ sub _install {
                         }
 
                         $tar = $args->{to};
+                        my $pubTar;
                         unless ($tar =~ /^$dataDir/) {
+                            $pubTar = "$pubDir/$tar";
                             $tar = "$dataDir/$tar";
                         }
 
                         $src = $args->{from};
+                        my $pubSrc;
                         unless ($src =~ /^$dataDir/) {
+                            $pubSrc = "$pubDir/$src";
                             $src = "$dataDir/$src";
+                        } else {
+                            $pubSrc = $src;
+                            $pubSrc = s#^\Q$dataDir\E##;
+                            $pubSrc = "$pubDir/$pubSrc";
                         }
 
                         foreach my $topic (@{$links}) {
+                            _makePath($tar);
                             symlink "$src/$topic.txt", "$tar/$topic.txt";
+                            if($pubTar && $pubSrc && -e "$pubSrc/$topic") {
+                                symlink "$pubSrc/$topic", "$pubTar/$topic";
+                            }
                         }
 
                         {
@@ -395,6 +407,7 @@ sub _install {
                             local $File::Copy::Recursive::CopyLink = 0;
                             foreach my $topic (@{$copies}) {
                                 File::Copy::Recursive::rcopy("$src/$topic.txt", "$tar/$topic.txt");
+                                File::Copy::Recursive::rcopy("$pubSrc/$topic", "$pubTar/$topic") if -e "$pubSrc/$topic";
                             }
                         }
                     }
