@@ -254,7 +254,7 @@
 
   var wikifyValue = function() {
     var $self = $(this);
-    var text =$.wikiword.wikify($self.val(), {transliterate: true, allow: 'a-zA-Z'});
+    var text =$.wikiword.wikify($self.val(), {transliterate: true, allow: 'a-zA-Z/.'});
     $self.val(text);
   };
 
