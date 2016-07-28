@@ -368,8 +368,14 @@ sub _install {
                         local $File::Copy::Recursive::CopyLink = 0;
                         File::Copy::Recursive::rcopy($src, $tar);
                     } elsif ($args->{move}) {
+                        my $dir = $tar;
+                        $dir =~ s#/[^/]+/*$##; # remove last dir, because it will be created
+                        _makePath($dir);
                         File::Copy::move($src, $tar);
                     } elsif ($args->{link}) {
+                        my $dir = $tar;
+                        $dir =~ s#/[^/]+/*$##; # remove last dir, because it will be a link
+                        _makePath($dir);
                         symlink $src, $tar;
                     } elsif ($args->{linkpartial}) {
                         unless (Foswiki::Func::webExists($installname)) {
@@ -398,6 +404,7 @@ sub _install {
                             _makePath($tar);
                             symlink "$src/$topic.txt", "$tar/$topic.txt";
                             if($pubTar && $pubSrc && -e "$pubSrc/$topic") {
+                                _makePath($pubTar);
                                 symlink "$pubSrc/$topic", "$pubTar/$topic";
                             }
                         }
@@ -477,6 +484,17 @@ sub _install {
         };
     }
     return $result;
+}
+
+# Make sure path exists
+# XXX I'm sure there is a perfectly fine lib for this
+sub _makePath {
+    my ($dst) = @_;
+    my $path = '';
+    foreach my $part ( split('/', $dst ) ) {
+        $path .= "/$part";
+        mkdir $path unless -d $path;
+    }
 }
 
 # Return sha256 checksum of content of file.
