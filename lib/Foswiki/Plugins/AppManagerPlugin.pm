@@ -21,7 +21,7 @@ use JSON;
 
 our $VERSION = '0.3';
 our $RELEASE = '0.3';
-our $SHORTDESCRIPTION  = 'AppManager';
+our $SHORTDESCRIPTION  = 'Modell Aachen application installer';
 our $NO_PREFS_IN_TOPIC = 1;
 
 sub initPlugin {
@@ -40,10 +40,35 @@ sub initPlugin {
     $restopts{http_allow} = 'GET';
     Foswiki::Func::registerRESTHandler('applist',   \&_RESTapplist,   %restopts);
     Foswiki::Func::registerRESTHandler('appdetail', \&_RESTappdetail, %restopts);
+    Foswiki::Func::registerRESTHandler('topiclist', \&_RESTtopiclist, %restopts);
     return 1;
 }
 
 ## Internal helpers
+
+sub _getHistoryPath {
+    my $app = shift;
+    my $plugin = __PACKAGE__;
+    $plugin =~ s/^Foswiki::Plugins:://;
+    my $work = Foswiki::Func::getWorkArea($plugin);
+    "$work/${app}_history.json";
+}
+
+sub _readHistory {
+    my $app = shift;
+    my $file = _getHistoryPath($app);
+    my $history = Foswiki::Func::readFile($file, 1) || '{}';
+    decode_json($history);
+}
+
+sub _writeHistory {
+    my ($app, $history) = @_;
+    my $file = _getHistoryPath($app);
+    my $text = encode_json($history);
+    Foswiki::Func::saveFile($file, $text, 1);
+    1;
+}
+
 # Returns application details
 sub _appdetail  {
     my ($app, @bad) = @_;
@@ -65,12 +90,61 @@ sub _appdetail  {
             $res->{description} = ${$ref};
         }
 
+        my $installed = Foswiki::Func::webExists($conf->{installname} || '') ? JSON::true : JSON::false;
+        my $extras = '';
+        my $history = _readHistory($app);
+        if ($history->{installed} && scalar(@{$history->{installed}})) {
+            $extras .= "*Installed as*:\n";
+            foreach my $w (@{$history->{installed}}) {
+                $extras .= "   * [[$w.WebHome][$w]]\n";
+            }
+        } elsif ($installed) {
+            # assume app is installed to its default location as specified in
+            # its appconfig.json
+            $extras .= "*Installed as*:\n   * [[$conf->{installname}.WebHome][$conf->{installname}]]\n";
+        }
+
+        if ($history->{linked} && scalar(@{$history->{linked}})) {
+            $extras .= "*Linked to*:\n";
+            foreach my $w (@{$history->{linked}}) {
+                $extras .= "   * [[$w.WebHome][$w]]\n";
+            }
+        }
+
+        if ($history->{partials}) {
+            $extras .= "*Partially linked to* (click for further details):\n";
+            foreach my $partial (keys %{$history->{partials}}) {
+                my $topics = join("\n", map {"      * [[$partial.$_][$_]]"} @{$history->{partials}->{$partial}});
+                $extras .= "   * %TWISTY{link=\"$partial\" mode=\"span\"}%\n$topics%ENDTWISTY%\n";
+            }
+        }
+
+        $installed = JSON::true if $extras;
+        my $labelClass = ($installed == JSON::true) ? 'installed' : 'uninstalled';
+        my $text = <<DESC;
+   * *Description*: $res->{description} <a href="%SCRIPTURLPATH{view}%/System/$app" target="_blank">(more)</a>
+   * *Installed*: <span class="label $labelClass">$installed</span>
+   * *Version*: %QUERYVERSION{"$app"}%
+DESC
+
+        $text .= <<EXTRAS if $extras;
+---
+$extras
+EXTRAS
+
+        my $meta = Foswiki::Meta->new($Foswiki::Plugins::SESSION);
+        $res->{description} = $meta->expandMacros(Foswiki::Func::renderText($text));
+
         # Collect actions
         my $actions = {};
         if ($conf->{'install'}) {
             $actions->{install} = {
                 "description" => "Install the application",
-                "parameters" => {"appname" => { "type" => "text"}}
+                "parameters" => {"appname" => { "type" => "text"}},
+                "installed" => $installed,
+                "allowsCopy" => $conf->{'allowsCopy'},
+                "allowsLink" => $conf->{'allowsLink'},
+                "defaultDestination" => $conf->{'installname'}
             };
             # "install" action implies "diff" action
             $actions->{diff} = $actions->{install};
@@ -247,12 +321,15 @@ sub _install {
     }
     my $installname = '';
     my $mode = 'install';
-    if (exists $args->{installname} || exists $conf->{installname}) {
-        $installname = $args->{installname} || $conf->{installname};
+    if (exists $args->{to} || exists $args->{installname} || exists $conf->{installname}) {
+        $installname = $args->{to} || $args->{installname} || $conf->{installname};
     }
     if (exists $args->{mode}) {
         $mode = $args->{mode};
     }
+
+    my $dataDir = $Foswiki::cfg{DataDir};
+    my $pubDir = $Foswiki::cfg{PubDir};
 
     my @operations = _installOperations($app, $installname);
     # Return notices
@@ -272,23 +349,86 @@ sub _install {
                 my $src = $ops->{from};
                 my $tar = $ops->{to};
 
+                my $links = decode_json($args->{links} || "[]");
+                my $copies = decode_json($args->{copies} || "[]");
+
                 unless ($src && $tar) {
                     $error = 1;
                     push @log, "Missing parameter 'from' and/or 'to'!";
                 }
 
                 push @log, "Move $src to $tar";
-                if ($pass eq 'check') {
+                if ($pass eq 'check' && !$args->{linkpartial}) {
                     if (! -e $src) { $error = 1; push @log, "Source file or directory $src does not exist!"; }
-                    if ( -e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
+                    if (-e $tar)  { $error = 1; push @log, "Target file or directory $tar does already exist!"; }
                 } elsif ((($pass eq 'install') and (! $error)) or ($pass eq 'forceinstall')) {
+                    my $history = _readHistory($app);
                     if ($args->{copy}) {
                         no warnings 'once';
                         local $File::Copy::Recursive::CopyLink = 0;
                         File::Copy::Recursive::rcopy($src, $tar);
-                    } else {
+                    } elsif ($args->{move}) {
+                        my $dir = $tar;
+                        $dir =~ s#/[^/]+/*$##; # remove last dir, because it will be created
+                        _makePath($dir);
                         File::Copy::move($src, $tar);
+                    } elsif ($args->{link}) {
+                        my $dir = $tar;
+                        $dir =~ s#/[^/]+/*$##; # remove last dir, because it will be a link
+                        _makePath($dir);
+                        symlink $src, $tar;
+                    } elsif ($args->{linkpartial}) {
+                        unless (Foswiki::Func::webExists($installname)) {
+                            Foswiki::Func::createWeb($installname);
+                        }
+
+                        $tar = $args->{to};
+                        my $pubTar;
+                        unless ($tar =~ /^$dataDir/) {
+                            $pubTar = "$pubDir/$tar";
+                            $tar = "$dataDir/$tar";
+                        }
+
+                        $src = $args->{from};
+                        my $pubSrc;
+                        unless ($src =~ /^$dataDir/) {
+                            $pubSrc = "$pubDir/$src";
+                            $src = "$dataDir/$src";
+                        } else {
+                            $pubSrc = $src;
+                            $pubSrc = s#^\Q$dataDir\E##;
+                            $pubSrc = "$pubDir/$pubSrc";
+                        }
+
+                        foreach my $topic (@{$links}) {
+                            _makePath($tar);
+                            symlink "$src/$topic.txt", "$tar/$topic.txt";
+                            if($pubTar && $pubSrc && -e "$pubSrc/$topic") {
+                                _makePath($pubTar);
+                                symlink "$pubSrc/$topic", "$pubTar/$topic";
+                            }
+                        }
+
+                        {
+                            no warnings 'once';
+                            local $File::Copy::Recursive::CopyLink = 0;
+                            foreach my $topic (@{$copies}) {
+                                File::Copy::Recursive::rcopy("$src/$topic.txt", "$tar/$topic.txt");
+                                File::Copy::Recursive::rcopy("$pubSrc/$topic", "$pubTar/$topic") if -e "$pubSrc/$topic";
+                            }
+                        }
                     }
+
+                    unless ($args->{linkpartial}) {
+                        $tar =~ s/^$dataDir\///;
+                        $tar =~ s/^$pubDir\///;
+                        push @{$history->{$args->{link} ? 'linked' : 'installed'}}, $tar;
+                    } else {
+                        push @{$history->{partials}->{$installname}}, @{$links};
+                        push @{$history->{partials}->{$installname}}, @{$copies};
+                    }
+
+                    _writeHistory($app, $history);
                 }
             }
 
@@ -340,10 +480,21 @@ sub _install {
         $result = {
             "result" => "ok",
             "type"   => "html",
-            "data"   => (sprintf("<p><strong>Appaction successful</strong></p><ul>%s</ul>", $log))
+            "data"   => (sprintf("<p><strong>App action completed successful</strong></p><ul>%s</ul>", $log))
         };
     }
     return $result;
+}
+
+# Make sure path exists
+# XXX I'm sure there is a perfectly fine lib for this
+sub _makePath {
+    my ($dst) = @_;
+    my $path = '';
+    foreach my $part ( split('/', $dst ) ) {
+        $path .= "/$part";
+        mkdir $path unless -d $path;
+    }
 }
 
 # Return sha256 checksum of content of file.
@@ -420,6 +571,27 @@ sub _RESTappdetail {
             : _appdetail($app));
 }
 
+sub _RESTtopiclist {
+    my ( $session, $subject, $verb, $response ) = @_;
+
+    my $dataDir = $Foswiki::cfg{DataDir};
+    my $q = $session->{request};
+    my $web = $q->param('webname');
+
+    if ($web !~ /^$dataDir/) {
+        $web = "$dataDir/$web";
+    }
+
+    if (! -e $web) {
+        $response->header(-status => 404);
+        return encode_json(_texterror("Given source web does not exist."));
+    }
+
+    $web =~ s/$dataDir\///;
+    my @topics = Foswiki::Func::getTopicList($web);
+    return encode_json({topics => \@topics});
+}
+
 # Returns list of managed and unmanaged applications.
 sub _RESTapplist {
     my ($session, $subject, $verb, $response) = @_;
@@ -456,7 +628,18 @@ sub _RESTappaction {
 
     # Check if action available
     if ((_appdetail($name)->{actions}->{$action}) || ($action eq 'install' && $name eq 'all')) {
-        return encode_json(_install($name)) if $action eq 'install';
+        if ($action eq 'install') {
+            my $opts = {
+                from => $q->param('from'),
+                to => $q->param('to'),
+                copies => $q->param('copylist') || '[]',
+                links => $q->param('linklist') || '[]'
+            };
+
+            my $type = $q->param('type') || 'move';
+            $opts->{$type} = 1;
+            return encode_json(_install($name, $opts))
+        }
         return encode_json(_appdiff($name)) if $action eq 'diff';
 
         $response->header(-status => 400);
@@ -484,7 +667,7 @@ sub _RESTinstallall {
         if ($status eq 'managed') {
             my $detail = _appdetail($name);
             if ($detail->{actions}->{install}) {
-                my $res = _install($name);
+                my $res = _install($name, {move => 1});
                 if ($res->{result} ne 'ok') {
                     push @log, "Installation failed: $name";
                     $error = 1;
