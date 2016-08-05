@@ -1,7 +1,8 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
-<!--
-%JQREQUIRE{"blockui"}%
+
+<verbatim style="display: none;">
+%STARTSECTION{"appmanager:content"}%%JQREQUIRE{"blockui,jqp::underscore,wikiword"}%
 %ADDTOZONE{
   "script"
   id="APPMANAGERCONTRIB::SCRIPTS"
@@ -13,7 +14,6 @@
   id="APPMANAGERCONTRIB::STYLES"
   text="<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />"
 }%
--->
 <div id="mainContainer">
   <div id="appMainContainer">
     <div id="managedAppsHeader">Managed Apps</div>
@@ -26,16 +26,18 @@
     </div>
   </div>
   <div id="appConfigContainer">
-    <div id="appConfigDescriptionHeader">%MAKETEXT{Description}%</div>
+    <div id="appConfigDescriptionHeader">Info</div>
     <div id="appConfigDescriptionContent"></div>
-    <div id="appConfigActionsHeader">%MAKETEXT{Actions}%</div>
+    <div id="appConfigActionsHeader">Actions</div>
     <div id="appConfigActionsContent"></div>
-    <div id="appConfigActionsOutputHeader">%MAKETEXT{Output}%</div>
+    <div id="appConfigActionsOutputHeader">Output</div>
     <div id="appConfigActionsOutput"></div>
   </div>
-  <div class="clear"></div>
 </div>
-<br>
+<br>%ENDSECTION{"appmanager:content"}%
+</verbatim>
+
+%IF{"'%WIKINAME%' ingroup 'AdminGroup'" then="$percntINCLUDE{\"%WEB%.%TOPIC%\" section=\"appmanager:content\"}$percnt"}%
 
 ---++ Documentation
 
@@ -45,12 +47,16 @@ Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Fosw
    * _appname_: The application name. Currently not used.
    * _description_: The application description. You may enter <nop>%SHORTDESCRIPTION%</nop> here, it will be replaced by the AppManagerPlugin.
    * _installname_: The default installation web. Will be used to replace <nop>%INSTALLNAME% later.
+   * _allowsCopy_: Boolean value to determine whether =AppManagerPlugin= is allowed to *copy* this application to a specified target web. Defaults to =false=.
+   * _allowsLink_: Boolean value to determine whether =AppManagerPlugin= is allowed to *symlink* this application to a specified target web. Defaults to =false=.
 
 <pre>
 {
     "appname": "MyAppContrib",
     "description": "<nop>%SHORTDESCRIPTION%</nop>",
     "installname": "MyApp",
+    "allowsCopy": true,
+    "allowsLink": true,
     "install": [{
       "action": "move",
       "from": "%DATADIR%/_apps/MyApp",
