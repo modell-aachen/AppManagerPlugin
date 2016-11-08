@@ -11,6 +11,7 @@ use Foswiki::Plugins ();
 
 # Core modules
 use Carp;
+use File::Find;
 require File::Spec;
 require File::Copy;
 require File::Copy::Recursive;
@@ -158,15 +159,23 @@ EXTRAS
 
 # Returns list of managed and unmanaged applications.
 sub _applist {
-    my $regex = $Foswiki::cfg{Plugins}{AppManagerPlugin}{AppRegExp} || '(App|Content)Contrib$';
-    my @topicList = grep {/$regex/} Foswiki::Func::getTopicList('System');
-
-    my $applist = {};
+    my $searchString = ""._getRootDir()."/lib/Foswiki/";
+    my @topicList = ();
+    find({
+        wanted => sub {
+                if($File::Find::name =~ /appconfig.json$/){
+                    push(@topicList, $File::Find::name);
+                }
+            },
+        no_chdir => 1
+        }, $searchString);
+    my $applist = [];
     for my $app (@topicList) {
-        if (_getJSONConfig($app)) {
-            $applist->{$app} = 'managed'; }
-        else {
-            $applist->{$app} = 'unmanaged';
+        my $jsonConfig = _getJSONConfig($app);
+        if ($jsonConfig) {
+            push(@$applist, {
+                name => $jsonConfig->{appname}
+            });
         }
     }
     return $applist;
@@ -193,7 +202,7 @@ sub _appdiff {
             if (! -e $src) { $msg = "Source file ($src) or directory does not exist"; }
             elsif ( -d $src && -f $tar) { $msg =  "Source is a directory, but target is a file. This is most likely bad."; }
             elsif ( -f $src && -d $tar) { $msg =  "Source is a file, but target is a directory. This is most likely bad."; }
-            elsif (( -f $src && -f $tar) && (_hashfile($src) ne _hashfile($tar))) { 
+            elsif (( -f $src && -f $tar) && (_hashfile($src) ne _hashfile($tar))) {
                                 $msg = _getFileDiff($src, $tar);
             }
             elsif ( -d $src && -d $tar) { # Compare directories
@@ -263,12 +272,9 @@ sub _getFileDiff {
 
 # Check for existing JSON file. Return undef on error.
 sub _getJSONConfig {
-    my ($app, @bad) = @_;
-    die "Extra parameters in " . (caller(0))[3] if @bad;
-    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
+    my $jsonPath = shift;
 
     my $res = undef;
-    my $jsonPath = File::Spec->catfile(_getRootDir(), 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
     if (-e $jsonPath) {
         my $fh;
         unless (open($fh, '<', $jsonPath)) {
@@ -292,7 +298,7 @@ sub _getJSONConfig {
                 }
             }
             if ($error) {
-                Foswiki::Func::writeWarning("Undefined json attributes for $app: " . join(', ', @missing));
+                Foswiki::Func::writeWarning("Undefined json attributes for $jsonPath: " . join(', ', @missing));
             } else {
                 $res = $jsonAppConfig;
             }
