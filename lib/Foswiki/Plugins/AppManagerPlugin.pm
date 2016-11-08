@@ -157,16 +157,16 @@ EXTRAS
     }
 }
 
-# Returns list of managed and unmanaged applications.
 sub _applist {
     my $searchString = ""._getRootDir()."/lib/Foswiki/";
     my @topicList = ();
     find({
         wanted => sub {
-                if($File::Find::name =~ /appconfig.json$/){
-                    push(@topicList, $File::Find::name);
-                }
-            },
+            if($File::Find::name =~ /appconfig\.json$/){
+                push(@topicList, $File::Find::name);
+            }
+        },
+        folow => 1,
         no_chdir => 1
         }, $searchString);
     my $applist = [];
