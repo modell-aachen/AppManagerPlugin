@@ -70,6 +70,13 @@ sub _writeHistory {
     1;
 }
 
+sub _appdetailnew  {
+    my $id = shift;
+
+    my $res = _getJSONConfigNew($id);
+    return $res;
+}
+
 # Returns application details
 sub _appdetail  {
     my ($app, @bad) = @_;
@@ -162,7 +169,7 @@ sub _applistnew {
     my @topicList = ();
     find({
         wanted => sub {
-            if($File::Find::name =~ /appconfig\.json$/){
+            if($File::Find::name =~ /appconfig_new\.json$/){
                 push(@topicList, $File::Find::name);
             }
         },
@@ -619,6 +626,7 @@ sub _RESTappdetail {
     my ($session, $subject, $verb, $response) = @_;
     my $q = $session->{request};
     my $app = $q->param('name');
+    my $version = $q->param('version');
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
@@ -627,10 +635,18 @@ sub _RESTappdetail {
     }
 
     $response->header(-status => !$app ? 400 : 200);
-    return encode_json(
-        !$app
-            ? _texterror('Parameter \'name\' is mandatory')
-            : _appdetail($app));
+    if($version){
+        return encode_json(
+            !$app
+                ? _texterror('Parameter \'name\' is mandatory')
+                : _appdetailnew($app));
+    }
+    else{
+        return encode_json(
+            !$app
+                ? _texterror('Parameter \'name\' is mandatory')
+                : _appdetail($app));
+    }
 }
 
 sub _RESTtopiclist {
