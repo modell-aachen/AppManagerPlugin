@@ -157,7 +157,7 @@ EXTRAS
     }
 }
 
-sub _applist {
+sub _applistnew {
     my $searchString = ""._getRootDir()."/lib/Foswiki/";
     my @topicList = ();
     find({
@@ -171,11 +171,27 @@ sub _applist {
         }, $searchString);
     my $applist = [];
     for my $app (@topicList) {
-        my $jsonConfig = _getJSONConfig($app);
+        my $jsonConfig = _getJSONConfigNew($app);
         if ($jsonConfig) {
             push(@$applist, {
+                id => $app,
                 name => $jsonConfig->{appname}
             });
+        }
+    }
+    return $applist;
+}
+
+sub _applist {
+    my $regex = $Foswiki::cfg{Plugins}{AppManagerPlugin}{AppRegExp} || '(App|Content)Contrib$';
+    my @topicList = grep {/$regex/} Foswiki::Func::getTopicList('System');
+
+    my $applist = {};
+    for my $app (@topicList) {
+        if (_getJSONConfig($app)) {
+            $applist->{$app} = 'managed'; }
+        else {
+            $applist->{$app} = 'unmanaged';
         }
     }
     return $applist;
@@ -271,7 +287,7 @@ sub _getFileDiff {
 }
 
 # Check for existing JSON file. Return undef on error.
-sub _getJSONConfig {
+sub _getJSONConfigNew {
     my $jsonPath = shift;
 
     my $res = undef;
@@ -299,6 +315,46 @@ sub _getJSONConfig {
             }
             if ($error) {
                 Foswiki::Func::writeWarning("Undefined json attributes for $jsonPath: " . join(', ', @missing));
+            } else {
+                $res = $jsonAppConfig;
+            }
+        }
+    }
+    return $res;
+}
+
+# Check for existing JSON file. Return undef on error.
+sub _getJSONConfig {
+    my ($app, @bad) = @_;
+    die "Extra parameters in " . (caller(0))[3] if @bad;
+    map { confess "Mandatory parameter not defined in ".(caller(0))[3] unless defined $_} ($app);
+
+    my $res = undef;
+    my $jsonPath = File::Spec->catfile(_getRootDir(), 'lib', 'Foswiki', 'Contrib', $app, 'appconfig.json');
+    if (-e $jsonPath) {
+        my $fh;
+        unless (open($fh, '<', $jsonPath)) {
+            Foswiki::Func::writeWarning("Could not open file $jsonPath");
+            return undef;
+        } else {
+            # Slurp file, read JSON
+            local $/;
+            my $json_text = <$fh>;
+            close($fh);
+            my $error = 0;
+            my @missing = ();
+            $json_text = Foswiki::Sandbox::untaintUnchecked($json_text);
+            my $jsonAppConfig = decode_json($json_text);
+
+            # Validate JSON structure
+            for my $check (qw(description install installname appname)) {
+                unless (exists $jsonAppConfig->{description}) {
+                    push @missing, $check;
+                    $error = 1;
+                }
+            }
+            if ($error) {
+                Foswiki::Func::writeWarning("Undefined json attributes for $app: " . join(', ', @missing));
             } else {
                 $res = $jsonAppConfig;
             }
@@ -602,12 +658,19 @@ sub _RESTtopiclist {
 sub _RESTapplist {
     my ($session, $subject, $verb, $response) = @_;
 
+    my $q = $session->{request};
+    my $apiVersion = $q->param('version');
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
         $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to list installed applications.'));
     }
-    return encode_json(_applist());
+    if($apiVersion){
+        return encode_json(_applistnew());
+    }
+    else{
+        return encode_json(_applist());
+    }
 }
 
 # RestHandler to execute action for app
