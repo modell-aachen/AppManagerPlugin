@@ -166,7 +166,7 @@ sub _applist {
                 push(@topicList, $File::Find::name);
             }
         },
-        folow => 1,
+        follow => 1,
         no_chdir => 1
         }, $searchString);
     my $applist = [];
