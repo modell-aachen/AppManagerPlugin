@@ -77,6 +77,44 @@ sub _appdetailnew  {
     return $res;
 }
 
+# This action is responsible for generating FormManagers
+# for a given web. It is based on the desired form name and
+# form group.
+sub _actionCreateForm {
+    my ($web, $formName, $formGroup) = @_;
+    my $topic = "".$formName."Manager";
+
+    my $meta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $web, $topic);
+    $meta->putAll('PREFERENCE',
+        {
+            name => 'ALLOW_TOPICCHANGE',
+            title => 'ALLOW_TOPICCHANGE',
+            value => 'AdminGroup'
+        },
+        {
+            name => 'FormGenerator_AppControlled',
+            title => 'FormGenerator_AppControlled',
+            value => '1'
+        },
+        {
+            name => 'FormGenerator_Group',
+            title => 'FormGenerator_Group',
+            value => $formGroup
+        },
+        {
+            name => 'VIEW_TEMPLATE',
+            title => 'VIEW_TEMPLATE',
+            value => 'FormGeneratorManagerView'
+        },
+        {
+            name => 'WORKFLOW',
+            title => 'WORKFLOW',
+            value => ''
+        }
+    );
+    Foswiki::Func::saveTopic($web, $topic, $meta, "");
+}
+
 # Returns application details
 sub _appdetail  {
     my ($app, @bad) = @_;
@@ -374,6 +412,24 @@ sub _getJSONConfig {
 sub _getRootDir {
     # FIXME there has to be a better solution
     return $Foswiki::cfg{TemplateDir} . '/..';
+}
+
+sub _installNew {
+    my $installConfig = shift;
+    my $destinationWeb = $installConfig->{destinationWeb};
+    Foswiki::Func::createWeb($destinationWeb);
+
+    for my $action (@{$installConfig->{installActions}}) {
+        my $actionName = $action->{action};
+        if($actionName eq 'createForm'){
+            my $formName = $action->{formName};
+            my $formGroup = $action->{formGroup};
+            _actionCreateForm($destinationWeb, $formName, $formGroup);
+        }
+        else if($actionName eq 'copy') {
+            # TODO
+        }
+    }
 }
 
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
@@ -696,6 +752,7 @@ sub _RESTappaction {
     my $q = $session->{request};
     my $name = $q->param('name');
     my $action = $q->param('action');
+    my $version = $q->param('version');
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
@@ -709,6 +766,13 @@ sub _RESTappaction {
     unless ($action) {
         $response->header(-status => 400);
         return encode_json(_texterror('Parameter \'action\' is mandatory'));
+    }
+
+    if($version) {
+        _installNew(decode_json($action));
+        return encode_json({
+            status => "ok"
+        });
     }
 
     # Check if action available
