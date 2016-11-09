@@ -1,7 +1,7 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
 
-%JQREQUIRE{"blockui,jqp::underscore,wikiword"}%
+%JQREQUIRE{"blockui,jqp::underscore,wikiword,jqp::sweetalert2"}%
 %ADDTOZONE{
   "script"
   id="APPMANAGERCONTRIB::SCRIPTS"

@@ -48,27 +48,34 @@ export default {
             this.edit = true;
         },
         installApp: function(action) {
+            self = this;
+            if( this.request ) {
+                return false;
+            }
+            NProgress.start();
             var requestData = {
                     version: "1",
-                    name: this.app,
-                    action: JSON.stringify(this.action)
+                    name: action.name,
+                    action: JSON.stringify(action)
             };
             this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction"
                 , requestData)
             .done( function(result) {
                 result = JSON.parse(result);
                 console.log(result);
-                self.infos = result;
+                swal("Installation Completed!", "App installed as " + action.destinationWeb + ".", "success");
                 NProgress.done();
+                self.request = null;
             })
             .fail( function(xhr, status, error) {
                 window.console && console.log(status + ': '+ error);
+                swal("Installation Failed!", error, "error");
                 NProgress.done();
+                self.request = null;
             });
         },
         loadDetails: function() {
             self = this;
-            NProgress.configure({ showSpinner: false });
             NProgress.start();
             this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
             .done( function(result) {
@@ -77,10 +84,12 @@ export default {
                 self.infos = result;
                 self.ready = true;
                 NProgress.done();
+                self.request = null;
             })
             .fail( function(xhr, status, error) {
                 window.console && console.log(status + ': '+ error);
                 NProgress.done();
+                self.request = null;
             });
         }
     },
@@ -89,6 +98,9 @@ export default {
         this.$on("reload", function() {
             this.edit = false;
             this.loadDetails();
+        });
+        this.$on("customInstall", function(action) {
+            this.installApp(action);
         });
     }
 }

@@ -23,23 +23,7 @@ export default {
             this.$parent.$emit('reload');
         },
         customInstall: function() {
-            var requestData = {
-                    version: "1",
-                    name: this.config.name,
-                    action: JSON.stringify(this.config)
-            };
-            this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction"
-                , requestData)
-            .done( function(result) {
-                result = JSON.parse(result);
-                console.log(result);
-                self.infos = result;
-                NProgress.done();
-            })
-            .fail( function(xhr, status, error) {
-                window.console && console.log(status + ': '+ error);
-                NProgress.done();
-            });
+            this.$parent.$emit('customInstall', this.config);
         }
     },
     created: function() {

@@ -40,6 +40,7 @@ export default {
         }
     },
     created: function() {
+        NProgress.configure({ showSpinner: false });
         NProgress.start();
         self = this;
         this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist?version=1")
