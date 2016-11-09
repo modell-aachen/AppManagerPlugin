@@ -416,9 +416,24 @@ sub _getRootDir {
 
 sub _installNew {
     my $installConfig = shift;
+
+    # Create the web
     my $destinationWeb = $installConfig->{destinationWeb};
+    if(Foswiki::Func::webExists($destinationWeb)){
+        return {
+            success => 0,
+            message => "The $destinationWeb web already exists."
+        };
+    }
     Foswiki::Func::createWeb($destinationWeb);
 
+    # Create web preferences
+    # TODO
+
+    # Install WebActions
+    # TODO
+
+    # Execute install actions
     for my $action (@{$installConfig->{installActions}}) {
         my $actionName = $action->{action};
         if($actionName eq 'createForm'){
@@ -430,6 +445,11 @@ sub _installNew {
             # TODO
         }
     }
+
+    return {
+        success => 1,
+        message => "OK"
+    };
 }
 
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
@@ -769,10 +789,11 @@ sub _RESTappaction {
     }
 
     if($version) {
-        _installNew(decode_json($action));
-        return encode_json({
-            status => "ok"
-        });
+        my $result = _installNew(decode_json($action));
+        if(! $result->{success}){
+            $response->header(-status => 400);
+        }
+        return encode_json($result);
     }
 
     # Check if action available
