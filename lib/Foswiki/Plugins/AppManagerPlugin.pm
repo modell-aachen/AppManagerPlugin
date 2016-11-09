@@ -426,7 +426,7 @@ sub _installNew {
             my $formGroup = $action->{formGroup};
             _actionCreateForm($destinationWeb, $formName, $formGroup);
         }
-        else if($actionName eq 'copy') {
+        elsif($actionName eq 'copy') {
             # TODO
         }
     }
