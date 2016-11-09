@@ -2,11 +2,13 @@
     <div class="flatskin-wrapped">
         <div class="row">
             <div class="column">
-                <ul>
-                    <li v-for="app in apps" v-on:click="getDetails(app.name)">
+            <table class="ma-table .striped">
+                <tr v-for="app in apps" v-on:click="getDetails(app.id)">
+                    <td>
                         <a href="#">{{ app.name }}</a>
-                    </li>
-                </ul>
+                    </td>
+                </tr>
+            </table>
             </div>
             <div class="column">
                 <app-details v-if="details" :app="appDetails"></app-details>
@@ -20,7 +22,6 @@ import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import $ from 'jquery'
 import AppDetails from './AppDetails.vue'
-
 export default {
     components: {
         AppDetails
@@ -33,28 +34,28 @@ export default {
        }
     },
     methods: {
-        getDetails: function(name) {
-            this.appDetails = name;
+        getDetails: function(id) {
+            this.appDetails = id;
             this.details = true;
         }
     },
     created: function() {
         NProgress.start();
         self = this;
-        this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist")
+        this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist?version=1")
         .done( function(result) {
             result = JSON.parse(result);
             console.log(result);
             self.apps = result;
+            NProgress.done();
         })
         .fail( function(xhr, status, error) {
             alert("Error get Data!");
+            NProgress.done();
         })
-        NProgress.done();
     }
 }
 </script>
 
 <style lang="sass">
-
 </style>

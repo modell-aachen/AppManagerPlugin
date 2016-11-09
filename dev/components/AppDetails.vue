@@ -1,11 +1,24 @@
 <template>
-    <div class="wrapper">
+    <div class="wrapper" v-show="ready">
         <div class="widgetBlockTitle">
-        {{ app }}
+        {{ infos.appname }}
         </div>
         <div class="widgetBlockContent">
-            test!
-            TEt!
+            <p>{{ infos.description }}</p>
+            <table class="ma-table">
+                <tr v-for="config in infos.installConfigs">
+                    <td class="top"><h3>{{config.name}}</h3></td>
+                    <td>
+                        <template v-if="!edit">
+                            <button class="button primary" v-on:click="installApp(config.name)">Install</button>
+                            <button class="button" v-on:click="editInstall(config)">Edit</button>
+                        </template>
+                        <template v-else>
+                            <app-edit :config="config"></app-edit>
+                        </template>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
 </template>
@@ -14,28 +27,83 @@
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import $ from 'jquery'
+import AppEdit from './AppEdit.vue'
 
 export default {
     props: ['app'],
+    components: {
+        AppEdit
+    },
     data : function () {
        return {
-           infos: ''
+           infos: '',
+           config: '',
+           edit: false,
+           ready: false
        }
     },
+    methods: {
+        editInstall: function(config) {
+            this.config = config;
+            this.edit = true;
+        },
+        installApp: function(action) {
+            var requestData = {
+                    version: "1",
+                    name: this.app,
+                    action: action
+            };
+            this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction"
+                , requestData)
+            .done( function(result) {
+                result = JSON.parse(result);
+                console.log(result);
+                self.infos = result;
+                NProgress.done();
+            })
+            .fail( function(xhr, status, error) {
+                window.console && console.log(status + ': '+ error);
+                NProgress.done();
+            });
+        },
+        loadDetails: function() {
+            self = this;
+            NProgress.configure({ showSpinner: false });
+            NProgress.start();
+            this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
+            .done( function(result) {
+                result = JSON.parse(result);
+                console.log(result);
+                self.infos = result;
+                self.ready = true;
+                NProgress.done();
+            })
+            .fail( function(xhr, status, error) {
+                window.console && console.log(status + ': '+ error);
+                NProgress.done();
+            });
+        }
+    },
     created: function() {
-        self = this;
-        this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetails?app=" + this.app)
-        .done( function(result) {
-            result = JSON.parse(result);
-            console.log(result);
-            self.infos = result;
-        })
-        .fail( function(xhr, status, error) {
-            alert("Error get Data!");
-        })
+        this.loadDetails();
+        this.$on("reload", function() {
+            this.edit = false;
+            this.loadDetails();
+        });
     }
 }
 </script>
 
 <style lang="sass">
+.flatskin-wrapped {
+    .button {
+        margin: 0px;
+    }
+    h3 {
+        margin: 0px;
+    }
+    .top {
+        vertical-align: top;
+    }
+}
 </style>
