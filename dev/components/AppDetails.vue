@@ -10,7 +10,7 @@
                     <td class="top"><h3>{{config.name}}</h3></td>
                     <td>
                         <template v-if="!edit">
-                            <button class="button primary" v-on:click="installApp(config.name)">Install</button>
+                            <button class="button primary" v-on:click="installApp(config)">Install</button>
                             <button class="button" v-on:click="editInstall(config)">Edit</button>
                         </template>
                         <template v-else>
@@ -51,7 +51,7 @@ export default {
             var requestData = {
                     version: "1",
                     name: this.app,
-                    action: action
+                    action: JSON.stringify(this.action)
             };
             this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction"
                 , requestData)
