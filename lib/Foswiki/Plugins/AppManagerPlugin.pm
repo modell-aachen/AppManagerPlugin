@@ -455,7 +455,16 @@ sub _installNew {
     );
     Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, "");
 
-    # Install WebActions
+    # Create WebActions
+    my $webActionsConfig = $installConfig->{webActionsConfig};
+
+    my ($defaultWebActionsMeta, $defaultWebActionsText) = Foswiki::Func::readTopic("System", $webActionsConfig->{viewTemplate});
+
+    Foswiki::Func::writeWarning($defaultWebActionsText);
+
+    Foswiki::Func::saveTopic($destinationWeb, "WebActions", $defaultWebActionsMeta, $defaultWebActionsText);
+
+    # Create WebTopicList
     # TODO
 
     # Execute install actions
