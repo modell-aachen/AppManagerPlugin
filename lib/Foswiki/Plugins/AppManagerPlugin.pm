@@ -78,7 +78,7 @@ sub _appdetailnew  {
     my $installed = [];
     if($appConfig){
         my $appHistory = _readHistory($appConfig->{appname});
-        if($appHistory->{installed}){
+        if($appHistory->{installed} && ref($appHistory->{installed}) eq "HASH"){
             my @webNames = keys(%{$appHistory->{installed}});
             while(@webNames){
                 my $webName = pop(@webNames);
