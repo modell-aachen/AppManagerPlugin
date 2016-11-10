@@ -1,12 +1,12 @@
 <template>
     <div class="wrapper" v-show="ready">
         <div class="widgetBlockTitle">
-        {{ infos.appname }}
+        {{ appConfig.appname }}
         </div>
         <div class="widgetBlockContent">
-            <p>{{ infos.description }}</p>
+            <p>{{ appConfig.description }}</p>
             <table class="ma-table">
-                <tr v-for="config in infos.installConfigs">
+                <tr v-for="config in appConfig.installConfigs">
                     <td class="top"><h3>{{config.name}}</h3></td>
                     <td>
                         <template v-if="!edit">
@@ -36,7 +36,8 @@ export default {
     },
     data : function () {
        return {
-           infos: '',
+           appConfig: '',
+           installed: [],
            config: '',
            edit: false,
            ready: false
@@ -82,7 +83,9 @@ export default {
             NProgress.start();
             this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
             .done( function(result) {
-                self.infos = JSON.parse(result);
+                var infos = JSON.parse(result);
+                self.appConfig = infos.appConfig;
+                self.installed = infos.installed;
                 self.ready = true;
                 NProgress.done();
                 self.request = null;
