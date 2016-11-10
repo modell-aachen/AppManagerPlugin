@@ -421,7 +421,7 @@ sub _installNew {
     my $destinationWeb = $installConfig->{destinationWeb};
     if(Foswiki::Func::webExists($destinationWeb)){
         return {
-            success => 0,
+            success => JSON::false,
             message => "The $destinationWeb web already exists."
         };
     }
@@ -447,7 +447,7 @@ sub _installNew {
     }
 
     return {
-        success => 1,
+        success => JSON::true,
         message => "OK"
     };
 }
@@ -790,9 +790,6 @@ sub _RESTappaction {
 
     if($version) {
         my $result = _installNew(decode_json($action));
-        if(! $result->{success}){
-            $response->header(-status => 400);
-        }
         return encode_json($result);
     }
 
