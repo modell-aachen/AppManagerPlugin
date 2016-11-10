@@ -4,4 +4,5 @@ data/System/AppManager.txt 0644
 data/System/AppManagerDefaultWebPreferences.txt 0644
 lib/Foswiki/Plugins/AppManagerPlugin.pm 0444
 lib/Foswiki/Plugins/AppManagerPlugin/Config.spec 0444
+tools/appmanager 0755
 pub/System/AppManagerPlugin/appmanager.js 0444

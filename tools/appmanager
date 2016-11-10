@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use Data::Dumper;
+do '../bin/setlib.cfg';
+require Foswiki;
+new Foswiki('admin');
+
+require Foswiki::Plugins::AppManagerPlugin;
+
+if(@ARGV < 1){
+	printHelp();
+	exit;
+}
+
+my $command = $ARGV[0];
+
+if($command eq 'install'){
+	install();
+	exit;
+}
+
+sub printHelp{
+	print "Usage: appmanager <command> [params...]\n";
+	print "\n";
+	print "Available commands:\n";
+	print "install\n";
+	print "\tExample: appmanager install MinutesAppContrib default\n"
+}
+
+sub install{
+	my $appName = $ARGV[1];
+	my $installName = $ARGV[2];
+
+	unless($appName && $installName){
+		print "For installation please specify app name and install name\n";
+		exit;
+	}
+
+	my $appList = Foswiki::Plugins::AppManagerPlugin::_applistnew();
+	my $appToInstall;
+	foreach my $app (@$appList){
+		if($app->{name} eq $appName){
+			$appToInstall = $app;
+		}
+	}
+	if(!$appToInstall){
+		print("No app configuration found for app $appName\n");
+		exit;
+	}
+	my $appDetails = Foswiki::Plugins::AppManagerPlugin::_appdetailnew($appToInstall->{id});
+	foreach my $installConfig (@{$appDetails->{appConfig}->{installConfigs}}){
+		if($installConfig->{name} eq $installName){
+			my $installResult = Foswiki::Plugins::AppManagerPlugin::_installNew($appName, $installConfig);
+			if($installResult->{success} eq "false"){
+				print "Installation failed: ";
+				print $installResult->{message}."\n";
+			}
+			else{
+				print "Installation finished\n";
+			}
+			exit;
+		}
+	}
+	print "No install configuration found for $installName\n";
+	exit;
+}
