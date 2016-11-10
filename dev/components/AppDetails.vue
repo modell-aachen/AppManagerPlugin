@@ -6,13 +6,14 @@
         <div class="widgetBlockContent">
             <p>{{ appConfig.description }}</p>
             <app-installed :installed="installed"></app-installed>
+            <p>For installation, the following configurations are available:</p>
             <table class="ma-table">
                 <tr v-for="config in appConfig.installConfigs">
                     <td class="top"><h3>{{config.name}}</h3></td>
                     <td>
                         <template v-if="!edit">
                             <button class="button primary" v-on:click="installApp(config)">Install</button>
-                            <button class="button" v-on:click="editInstall(config)">Edit</button>
+                            <button class="button" v-on:click="editInstall(config)" title="Click to customize this configuration">Edit</button>
                         </template>
                         <template v-else>
                             <app-edit :config="config"></app-edit>
@@ -161,6 +162,11 @@ export default {
     }
     .top {
         vertical-align: top;
+    }
+    .flatskin-wrapped .ma-table {
+        .right {
+            text-align: right;
+        }    
     }
 }
 </style>

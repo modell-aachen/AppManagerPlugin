@@ -2,18 +2,26 @@
     <div class="wrapper" v-show="ready">
         Installname: <input type="text" v-model="config.destinationWeb"/>
         <template v-if="hasCreateFormActions">
-            The following forms will be installed:
-            <table>
-                <tr v-for="action in config.installActions">
-                    <template v-if='action.action=="createForm"'>
-                        <td>Form name:<input type="text" v-model="action.formName"/></td>
-                        <td>Form group:<input type="text" v-model="action.formGroup"/></td>
-                    </template>                
-                </tr>
+            <p>The following forms will be installed:</p>
+            <table class="ma-table">
+                <thead>
+                    <tr>
+                        <th>Form Name</th>
+                        <th>Form Group</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="action in config.installActions">
+                        <template v-if='action.action=="createForm"'>
+                            <td><input type="text" v-model="action.formName"/></td>
+                            <td><input type="text" v-model="action.formGroup"/></td>
+                        </template>                
+                    </tr>
+                <tbody>
             </table>
         </template>
-        <button class="button primary" v-on:click="customInstall()">Install</button>
-        <button class="button alert" v-on:click="abort()">Abort</button>
+        <button class="button primary" v-on:click="customInstall()" title="Install the app using this configuration">Install</button>
+        <button class="button alert" v-on:click="abort()" title="Discard changes">Abort</button>
     </div>
 </template>
 

@@ -40,7 +40,7 @@ export default {
                 confirmButtonColor: "#D83314",
                 confirmButtonText: "Confirm",
                 cancelButtonText: "Cancel",
-                closeOnConfirm: false,
+                closeOnConfirm: true,
                 closeOnCancel: true
             },
             function(isConfirm){
