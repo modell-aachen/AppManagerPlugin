@@ -5,6 +5,7 @@
         </div>
         <div class="widgetBlockContent">
             <p>{{ appConfig.description }}</p>
+            <app-installed :installed="installed"></app-installed>
             <table class="ma-table">
                 <tr v-for="config in appConfig.installConfigs">
                     <td class="top"><h3>{{config.name}}</h3></td>
@@ -28,11 +29,13 @@ import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import $ from 'jquery'
 import AppEdit from './AppEdit.vue'
+import AppInstalled from './AppInstalled.vue'
 
 export default {
     props: ['app'],
     components: {
-        AppEdit
+        AppEdit,
+        AppInstalled
     },
     data : function () {
        return {
@@ -72,9 +75,37 @@ export default {
                 }
                 NProgress.done();
                 self.request = null;
+                self.loadDetails();
             })
             .fail( function(xhr, status, error) {
                 NProgress.done();
+                self.request = null;
+            });
+        },
+        uninstallApp: function(app) {
+            self = this;
+            if( this.request ) {
+                return false;
+            }
+            var requestData = {
+                    appWeb: app
+            };
+            this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appuninstall",
+            requestData)
+            .done( function(result) {
+                result = JSON.parse(result);
+                window.console && window.console.log(result);
+                if(result.status == "ok") {
+                    swal("Success!",
+                    "App uninstalled",
+                    "success");
+                } else {
+                    swal("Uninstallation Failed!", result.message, "error");
+                }
+                self.loadDetails();
+                self.request = null;
+            })
+            .fail( function(xhr, status, error) {
                 self.request = null;
             });
         },
@@ -105,6 +136,9 @@ export default {
         this.$on("customInstall", function(action) {
             this.installApp(action);
         });
+        this.$on("uninstallApp", function(app) {
+            this.uninstallApp(app);
+        })
     }
 }
 </script>
