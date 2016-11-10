@@ -427,12 +427,33 @@ sub _installNew {
     }
     Foswiki::Func::createWeb($destinationWeb);
 
-    # Create web preferences
+    # Create WebPreferences
     my (undef, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
     $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
-    Foswiki::Func::writeWarning($appName);
-    Foswiki::Func::writeWarning($defaultWebText);
     Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", undef, $defaultWebText);
+
+    # Create WebHome
+    my $webHomeConfig = $installConfig->{webHomeConfig};
+
+    my $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
+    $webHomeMeta->putAll('PREFERENCE',
+        {
+            name => 'ALLOW_TOPICCHANGE',
+            title => 'ALLOW_TOPICCHANGE',
+            value => 'AdminGroup'
+        },
+        {
+            name => 'VIEW_TEMPLATE',
+            title => 'VIEW_TEMPLATE',
+            value => $webHomeConfig->{viewTemplate}
+        },
+        {
+            name => 'TOPICTITLE',
+            title => 'TOPICTITLE',
+            value => $webHomeConfig->{topicTitle}
+        }
+    );
+    Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, "");
 
     # Install WebActions
     # TODO
