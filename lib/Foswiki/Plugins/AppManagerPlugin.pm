@@ -36,6 +36,7 @@ sub initPlugin {
 
     my %restopts = (authenticate => 1, validate => 0, http_allow => 'POST,GET');
     Foswiki::Func::registerRESTHandler('appaction', \&_RESTappaction, %restopts);
+    Foswiki::Func::registerRESTHandler('appuninstall', \&_RESTappuninstall, %restopts);
     Foswiki::Func::registerRESTHandler('installall', \&_RESTinstallall, %restopts);
 
     $restopts{http_allow} = 'GET';
@@ -73,8 +74,24 @@ sub _writeHistory {
 sub _appdetailnew  {
     my $id = shift;
 
-    my $res = _getJSONConfigNew($id);
-    return $res;
+    my $appConfig = _getJSONConfigNew($id);
+    my $installed = [];
+    if($appConfig){
+        my $appHistory = _readHistory($appConfig->{appname});
+        if($appHistory->{installed}){
+            my @webNames = keys(%{$appHistory->{installed}});
+            while(@webNames){
+                my $webName = pop(@webNames);
+                push(@$installed, {
+                    webName => $webName
+                });
+            }
+        }
+    }
+    return {
+        installed => $installed,
+        appConfig => $appConfig
+    };
 }
 
 # This action is responsible for generating FormManagers
@@ -480,10 +497,28 @@ sub _installNew {
         }
     }
 
+    # Write the history
+    my $appHistory = _readHistory($appName);
+    if(!$appHistory->{installed}){
+        $appHistory->{installed} = {};
+    }
+    $appHistory->{installed}->{$destinationWeb} = {
+        "installConfig" => $installConfig,
+        "installDate" => time()
+    };
+
+    _writeHistory($appName, $appHistory);
+
     return {
         success => JSON::true,
         message => "OK"
     };
+}
+
+sub _uninstall {
+    my $web = shift;
+
+    Foswiki::Func::moveWeb($web, "Trash.$web");
 }
 
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
@@ -855,6 +890,17 @@ sub _RESTappaction {
 
     $response->header(-status => 400);
     return encode_json(_texterror('Action not available for app.'));
+}
+
+sub _RESTappuninstall {
+    my ($session, $subject, $verb, $response) = @_;
+
+    my $q = $session->{request};
+    my $appWeb = $q->param('appWeb');
+
+    _uninstall($appWeb);
+
+    return encode_json({"status" => "ok"});
 }
 
 # Returns list of managed and unmanaged applications.
