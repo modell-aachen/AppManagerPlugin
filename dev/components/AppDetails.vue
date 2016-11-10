@@ -62,14 +62,15 @@ export default {
                 , requestData)
             .done( function(result) {
                 result = JSON.parse(result);
-                console.log(result);
-                swal("Installation Completed!", "App installed as " + action.destinationWeb + ".", "success");
+                if(result.success) {
+                    swal("Installation Completed!", "App installed as " + action.destinationWeb + ".", "success");
+                } else {
+                    swal("Installation Failed!", result.message, "error");
+                }
                 NProgress.done();
                 self.request = null;
             })
             .fail( function(xhr, status, error) {
-                window.console && console.log(status + ': '+ error);
-                swal("Installation Failed!", error, "error");
                 NProgress.done();
                 self.request = null;
             });

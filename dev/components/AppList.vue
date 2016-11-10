@@ -40,6 +40,12 @@ export default {
         }
     },
     created: function() {
+        $( document ).ajaxError(function( event, request, settings, thrownError ) {
+                window.console && console.log(request);
+                window.console && console.log(settings);
+                window.console && console.log(thrownError);
+                swal("Request failed!", thrownError, "error");
+        });
         NProgress.configure({ showSpinner: false });
         NProgress.start();
         self = this;
@@ -59,4 +65,12 @@ export default {
 </script>
 
 <style lang="sass">
+.sweet-alert {
+    h2 {
+        border-style: none;
+    }
+    hr {
+        background-color: transparent;
+    }
+}
 </style>
