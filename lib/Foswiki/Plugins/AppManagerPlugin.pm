@@ -79,7 +79,7 @@ sub _appdetailnew  {
 
 # This action is responsible for generating FormManagers
 # for a given web. It is based on the desired form name and
-# form group.
+# form group. FormGenerators need to be installed by the Plugin/Contrib.
 sub _actionCreateForm {
     my ($web, $formName, $formGroup) = @_;
     my $topic = "".$formName."Manager";
@@ -415,7 +415,7 @@ sub _getRootDir {
 }
 
 sub _installNew {
-    my $installConfig = shift;
+    my ($appName, $installConfig) = @_;
 
     # Create the web
     my $destinationWeb = $installConfig->{destinationWeb};
@@ -428,7 +428,11 @@ sub _installNew {
     Foswiki::Func::createWeb($destinationWeb);
 
     # Create web preferences
-    # TODO
+    my (undef, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
+    $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
+    Foswiki::Func::writeWarning($appName);
+    Foswiki::Func::writeWarning($defaultWebText);
+    Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", undef, $defaultWebText);
 
     # Install WebActions
     # TODO
@@ -772,24 +776,30 @@ sub _RESTappaction {
     my $q = $session->{request};
     my $name = $q->param('name');
     my $action = $q->param('action');
+
+    my $appId = $q->param('appId');
+    my $installConfig = $q->param('installConfig');
     my $version = $q->param('version');
+
 
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
         $response->header(-status => 403);
         return encode_json(_texterror('Only Admins are allowed to execute actions.'));
     }
-    unless ($name)   {
+    unless ($name || $appId)   {
         $response->header(-status => 400);
         return encode_json(_texterror('Parameter \'name\' is mandatory'));
     }
-    unless ($action) {
+    unless ($action || $installConfig) {
         $response->header(-status => 400);
         return encode_json(_texterror('Parameter \'action\' is mandatory'));
     }
 
     if($version) {
-        my $result = _installNew(decode_json($action));
+        my $appConfig = _getJSONConfigNew($appId);
+        my $appName = $appConfig->{appname};
+        my $result = _installNew($appName, decode_json($installConfig));
         return encode_json($result);
     }
 

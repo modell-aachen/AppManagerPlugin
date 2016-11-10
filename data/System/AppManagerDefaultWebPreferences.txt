@@ -1,0 +1,10 @@
+<sticky>
+<div class="%IF{"not context PreferencesPluginEnabled" then="foswikiHidden"}%">
+%EDITPREFERENCES{"%SYSTEMWEB%.DefaultPreferencesForm"}%
+</div>
+</sticky>
+
+---++ Project Settings
+
+   * Set DEFAULT_SOURCES = <DEFAULT_SOURCES_PREFERENCE>
+      * See <a href="#defaultPrefs">Default Preferences</a>
