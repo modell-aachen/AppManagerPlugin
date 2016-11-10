@@ -31,7 +31,23 @@ export default {
     },
     methods: {
         uninstallApp: function (app) {
-            this.$parent.$emit('uninstallApp', app);
+            var parent = this.$parent;
+            swal({
+                title: "Are you sure?",
+                text: "All topics of " + app + " will be moved to the Trash Web.",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#D83314",
+                confirmButtonText: "Confirm",
+                cancelButtonText: "Cancel",
+                closeOnConfirm: false,
+                closeOnCancel: true
+            },
+            function(isConfirm){
+                if (isConfirm) {
+                    parent.$emit('uninstallApp', app);
+                }
+            });
         }
     },
     created: function() {
