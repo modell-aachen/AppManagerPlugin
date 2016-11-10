@@ -139,6 +139,10 @@ export default {
         });
         this.$on("uninstallApp", function(app) {
             this.uninstallApp(app);
+        });
+        // is fired whenever the app property changes
+        this.$watch("app", function(newVal, oldVal) {
+            this.loadDetails();
         })
     }
 }
