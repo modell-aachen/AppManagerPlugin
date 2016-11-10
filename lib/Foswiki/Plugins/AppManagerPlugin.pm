@@ -465,7 +465,7 @@ sub _installNew {
     Foswiki::Func::saveTopic($destinationWeb, "WebActions", $defaultWebActionsMeta, $defaultWebActionsText);
 
     # Create WebTopicList
-    # TODO
+    Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
     # Execute install actions
     for my $action (@{$installConfig->{installActions}}) {
