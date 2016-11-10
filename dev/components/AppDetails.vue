@@ -55,15 +55,17 @@ export default {
             NProgress.start();
             var requestData = {
                     version: "1",
-                    name: action.name,
-                    action: JSON.stringify(action)
+                    appId: this.app,
+                    installConfig: JSON.stringify(action)
             };
-            this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction"
-                , requestData)
+            this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction",
+            requestData)
             .done( function(result) {
                 result = JSON.parse(result);
                 if(result.success) {
-                    swal("Installation Completed!", "App installed as " + action.destinationWeb + ".", "success");
+                    swal("Installation Completed!",
+                    "App installed as " + action.destinationWeb + ".",
+                    "success");
                 } else {
                     swal("Installation Failed!", result.message, "error");
                 }
@@ -80,15 +82,12 @@ export default {
             NProgress.start();
             this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
             .done( function(result) {
-                result = JSON.parse(result);
-                console.log(result);
-                self.infos = result;
+                self.infos = JSON.parse(result);
                 self.ready = true;
                 NProgress.done();
                 self.request = null;
             })
             .fail( function(xhr, status, error) {
-                window.console && console.log(status + ': '+ error);
                 NProgress.done();
                 self.request = null;
             });

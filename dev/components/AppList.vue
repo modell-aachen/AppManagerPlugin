@@ -51,13 +51,10 @@ export default {
         self = this;
         this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist?version=1")
         .done( function(result) {
-            result = JSON.parse(result);
-            console.log(result);
-            self.apps = result;
+            self.apps = JSON.parse(result);
             NProgress.done();
         })
         .fail( function(xhr, status, error) {
-            alert("Error get Data!");
             NProgress.done();
         })
     }
