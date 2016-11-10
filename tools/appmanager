@@ -24,6 +24,10 @@ elsif($command eq 'list'){
 	list();
 	exit;
 }
+elsif($command eq 'uninstall'){
+	uninstall();
+	exit;
+}
 
 sub printHelp{
 	print "Usage: appmanager <command> [params...]\n";
@@ -82,11 +86,23 @@ sub list{
 		my $history = Foswiki::Plugins::AppManagerPlugin::_readHistory($app->{name});
 		if($history->{installed}){
 			print "\t\tInstalled in: ";
-			print join(",",keys($history->{installed}))."\n";
+			print join(",",keys(%{$history->{installed}}))."\n";
 		}
 		else{
 			print "\t\tNot installed\n";
 		}
 	}
+	exit;
+}
+
+sub uninstall{
+	my $webName = $ARGV[1];
+
+	unless($webName) {
+		print "For uninstallation please specify the web name\n";
+		exit;
+	}
+
+	Foswiki::Plugins::AppManagerPlugin::_uninstall($webName);
 	exit;
 }

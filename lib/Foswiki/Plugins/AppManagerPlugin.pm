@@ -518,7 +518,12 @@ sub _installNew {
 sub _uninstall {
     my $web = shift;
 
-    Foswiki::Func::moveWeb($web, "Trash.$web");
+    # Move web to trash
+    # (with timestamp to avoid name clashes if webs with the same name are deleted multiple times)
+    Foswiki::Func::moveWeb($web, "Trash.$web".time());
+
+    # Remove from history
+    # TODO
 }
 
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
