@@ -1,7 +1,7 @@
 <template>
     <div class="flatskin-wrapped">
         <div class="row">
-            <div class="column">
+            <div class="shrink column">
             <table class="ma-table .striped">
                 <tr v-for="app in apps" v-on:click="getDetails(app.id)">
                     <td>
