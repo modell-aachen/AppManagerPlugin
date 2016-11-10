@@ -20,6 +20,10 @@ if($command eq 'install'){
 	install();
 	exit;
 }
+elsif($command eq 'list'){
+	list();
+	exit;
+}
 
 sub printHelp{
 	print "Usage: appmanager <command> [params...]\n";
@@ -33,8 +37,11 @@ sub install{
 	my $appName = $ARGV[1];
 	my $installName = $ARGV[2];
 
-	unless($appName && $installName){
-		print "For installation please specify app name and install name\n";
+	unless($installName){
+		$installName = "default";
+	}
+	unless($appName){
+		print "For installation please specify the app name\n";
 		exit;
 	}
 
@@ -64,5 +71,22 @@ sub install{
 		}
 	}
 	print "No install configuration found for $installName\n";
+	exit;
+}
+
+sub list{
+	my $appList = Foswiki::Plugins::AppManagerPlugin::_applistnew();
+	print "Apps managed by the AppManager:\n";
+	foreach my $app (@$appList){
+		print "\t".$app->{name}."\n";
+		my $history = Foswiki::Plugins::AppManagerPlugin::_readHistory($app->{name});
+		if($history->{installed}){
+			print "\t\tInstalled in: ";
+			print join(",",keys($history->{installed}))."\n";
+		}
+		else{
+			print "\t\tNot installed\n";
+		}
+	}
 	exit;
 }
