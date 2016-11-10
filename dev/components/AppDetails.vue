@@ -142,6 +142,7 @@ export default {
         });
         // is fired whenever the app property changes
         this.$watch("app", function(newVal, oldVal) {
+            this.edit = false;
             this.loadDetails();
         })
     }
