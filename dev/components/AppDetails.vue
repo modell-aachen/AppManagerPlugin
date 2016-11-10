@@ -88,7 +88,8 @@ export default {
                 return false;
             }
             var requestData = {
-                    appWeb: app
+                    appWeb: app,
+                    appName: this.appConfig.appname
             };
             this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appuninstall",
             requestData)
