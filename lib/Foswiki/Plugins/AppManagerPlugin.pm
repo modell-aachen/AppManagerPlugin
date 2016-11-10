@@ -221,27 +221,27 @@ EXTRAS
 
 sub _applistnew {
     my $searchString = ""._getRootDir()."/lib/Foswiki/";
-    my @topicList = ();
+    my @configs = ();
     find({
         wanted => sub {
             if($File::Find::name =~ /appconfig_new\.json$/){
-                push(@topicList, $File::Find::name);
+                push(@configs, $File::Find::name);
             }
         },
         follow => 1,
         no_chdir => 1
         }, $searchString);
-    my $applist = [];
-    for my $app (@topicList) {
-        my $jsonConfig = _getJSONConfigNew($app);
-        if ($jsonConfig) {
-            push(@$applist, {
-                id => $app,
-                name => $jsonConfig->{appname}
+    my $appList = [];
+    for my $appConfigPath (@configs) {
+        my $appConfig = _getJSONConfigNew($appConfigPath);
+        if ($appConfig) {
+            push(@$appList, {
+                id => $appConfigPath,
+                name => $appConfig->{appname}
             });
         }
     }
-    return $applist;
+    return $appList;
 }
 
 sub _applist {
