@@ -5,7 +5,7 @@
             <table class="ma-table .striped">
                 <tr v-for="app in installed">
                     <td>
-                        {{ app.webName }}
+                        <a v-bind:href="linkToWeb(app.webName)">{{ app.webName }}</a>
                     </td>
                     <td class="right">
                         <button class="button alert" v-on:click="uninstallApp(app.webName)">Uninstall</button>
@@ -48,6 +48,9 @@ export default {
                     parent.$emit('uninstallApp', app);
                 }
             });
+        },
+        linkToWeb: function(webName) {
+            return foswiki.getScriptUrl() + "view/" + webName;
         }
     },
     created: function() {
