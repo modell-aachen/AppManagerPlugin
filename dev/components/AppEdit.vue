@@ -24,7 +24,7 @@
             <p>
                 <textarea rows="16" v-model="configAsJson" v-on:input="validateJson()"></textarea>
             </p>
-            <p v-if="invalidJson" id="errorMessage">
+            <p v-if="invalidJson" class="ma-notification ma-failure">
                 {{ errorMessage }}
             </p>
         </template>
@@ -87,12 +87,4 @@ export default {
 </script>
 
 <style lang="sass">
-    .flatskin-wrapped {
-        .redBorder {
-            border: 2px red solid;
-        }
-    }
-    #errorMessage {
-        color: red;
-    }
 </style>
