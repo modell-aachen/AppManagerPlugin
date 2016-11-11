@@ -84,7 +84,7 @@ sub list{
 	foreach my $app (@$appList){
 		print "\t".$app->{name}."\n";
 		my $history = Foswiki::Plugins::AppManagerPlugin::_readHistory($app->{name});
-		if($history->{installed}){
+		if($history->{installed} && ref($history->{installed}) eq "HASH"){
 			print "\t\tInstalled in: ";
 			print join(",",keys(%{$history->{installed}}))."\n";
 		}
@@ -96,13 +96,14 @@ sub list{
 }
 
 sub uninstall{
-	my $webName = $ARGV[1];
+	my $appName = $ARGV[1];
+	my $webName = $ARGV[2];
 
-	unless($webName) {
-		print "For uninstallation please specify the web name\n";
+	unless($appName && $webName) {
+		print "For uninstallation please specify the app name and the web name\n";
 		exit;
 	}
 
-	Foswiki::Plugins::AppManagerPlugin::_uninstall($webName);
+	Foswiki::Plugins::AppManagerPlugin::_uninstall($appName, $webName);
 	exit;
 }

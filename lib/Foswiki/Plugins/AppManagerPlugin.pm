@@ -499,7 +499,7 @@ sub _installNew {
 
     # Write the history
     my $appHistory = _readHistory($appName);
-    if(!$appHistory->{installed}){
+    unless($appHistory->{installed} && ref($appHistory->{installed}) eq "HASH"){
         $appHistory->{installed} = {};
     }
     $appHistory->{installed}->{$destinationWeb} = {
@@ -516,14 +516,25 @@ sub _installNew {
 }
 
 sub _uninstall {
-    my $web = shift;
-
+    my ($appName,$web) = @_;
     # Move web to trash
     # (with timestamp to avoid name clashes if webs with the same name are deleted multiple times)
-    Foswiki::Func::moveWeb($web, "Trash.$web".time());
+    print "Uninstall\n";
+
+    eval {
+        Foswiki::Func::moveWeb($web, "Trash.$web".time());
+    };
+
+    if($@){
+        #TODO: Check for valid errors.
+    }
 
     # Remove from history
-    # TODO
+    my $history = _readHistory($appName);
+    my %installed = %{$history->{installed}};
+    delete $installed{$web};
+    $history->{installed} = \%installed;
+    _writeHistory($appName, $history);
 }
 
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
@@ -901,9 +912,10 @@ sub _RESTappuninstall {
     my ($session, $subject, $verb, $response) = @_;
 
     my $q = $session->{request};
+    my $appName = $q->param('appName');
     my $appWeb = $q->param('appWeb');
 
-    _uninstall($appWeb);
+    _uninstall($appName, $appWeb);
 
     return encode_json({"status" => "ok"});
 }
