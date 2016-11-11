@@ -504,6 +504,10 @@ sub _installNew {
     # Create WebTopicList
     Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
+    # Create WebStatistics
+    my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic("System","AppManagerDefaultWebStatisticsTemplate");
+    Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
+
     # Execute install actions
     for my $action (@{$installConfig->{installActions}}) {
         my $actionName = $action->{action};
