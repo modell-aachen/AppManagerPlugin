@@ -132,6 +132,17 @@ sub _actionCreateForm {
     Foswiki::Func::saveTopic($web, $topic, $meta, "");
 }
 
+sub _actionCopy{
+    my ($destinationWeb, $copyAction) = @_;
+
+    foreach my $webTopic (@{$copyAction->{topics}}){
+        print STDERR $webTopic."\n";
+        my ($web, $topic) = Foswiki::Func::normalizeWebTopicName('', $webTopic);
+        my ($meta, $text) = Foswiki::Func::readTopic("_apps/".$web, $topic);
+        Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, $text);
+    }
+}
+
 # Returns application details
 sub _appdetail  {
     my ($app, @bad) = @_;
@@ -502,7 +513,7 @@ sub _installNew {
             _actionCreateForm($destinationWeb, $formName, $formGroup);
         }
         elsif($actionName eq 'copy') {
-            # TODO
+            _actionCopy($destinationWeb, $action);
         }
     }
 
