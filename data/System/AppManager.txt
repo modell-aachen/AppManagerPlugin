@@ -19,11 +19,6 @@
   id="FLATSKIN::STYLES"
   text="<link rel='stylesheet' href='%PUBURLPATH%/System/FlatSkin/css/flatskin_wrapped.min.css' />"
 }%
-%ADDTOZONE{
-  "head"
-  id="APPMANAGERCONTRIB::STYLES"
-  text="<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />"
-}%
 <div class="app-manager">
    <app-list></app-list>
 </div>
