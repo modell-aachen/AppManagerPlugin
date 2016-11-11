@@ -13,7 +13,7 @@
                     <td>
                         <template v-if="!edit">
                             <button class="button primary" v-on:click="installApp(config)">Install</button>
-                            <button class="button" v-on:click="editInstall(config)" title="Click to customize this configuration">Edit</button>
+                            <button class="button" v-on:click="editInstall" title="Click to customize this configuration">Edit</button>
                         </template>
                         <template v-else>
                             <app-edit :config="config"></app-edit>
@@ -42,17 +42,15 @@ export default {
        return {
            appConfig: '',
            installed: [],
-           config: '',
            edit: false,
            ready: false
        }
     },
     methods: {
-        editInstall: function(config) {
-            this.config = config;
+        editInstall: function() {
             this.edit = true;
         },
-        installApp: function(action) {
+        installApp: function(config) {
             self = this;
             if( this.request ) {
                 return false;
@@ -61,7 +59,7 @@ export default {
             var requestData = {
                     version: "1",
                     appId: this.app,
-                    installConfig: JSON.stringify(action)
+                    installConfig: JSON.stringify(config)
             };
             this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appaction",
             requestData)
@@ -69,7 +67,7 @@ export default {
                 result = JSON.parse(result);
                 if(result.success) {
                     swal("Installation Completed!",
-                    "App installed as " + action.destinationWeb + ".",
+                    "App installed as " + config.destinationWeb + ".",
                     "success");
                 } else {
                     swal("Installation Failed!", result.message, "error");
@@ -133,12 +131,12 @@ export default {
     },
     created: function() {
         this.loadDetails();
-        this.$on("reload", function() {
+        this.$on("abort", function() {
             this.edit = false;
-            this.loadDetails();
+            //this.loadDetails();
         });
-        this.$on("customInstall", function(action) {
-            this.installApp(action);
+        this.$on("customInstall", function(config) {
+            this.installApp(config);
         });
         this.$on("uninstallApp", function(app) {
             this.uninstallApp(app);

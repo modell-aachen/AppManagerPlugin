@@ -1,22 +1,8 @@
 <template>
     <div class="wrapper" v-show="ready">
-        Installname
-        <input type="text" v-model="config.destinationWeb"/>
-        <template v-if="false">
-            <p>The following forms will be installed:</p>
-            <div>
-            <table class="ma-table">
-                <thead><tr><th>Form Name</th><th>Form Group</th></tr></thead>
-                <tbody>
-                    <tr v-for="action in config.installActions">
-                        <template v-if='action.action=="createForm"'>
-                            <td><input type="text" v-model="action.formName"/></td>
-                            <td><input type="text" v-model="action.formGroup"/></td>
-                        </template>                
-                    </tr>
-                <tbody>
-            </table>
-            </div>
+        <template v-if="true">
+            Installname
+            <input type="text" v-model="installName"/>
         </template>
         <input type="checkbox" id="expertcheckbox" v-model="expert"/>
         <label for="expertcheckbox">Expert</label>
@@ -44,43 +30,51 @@ export default {
            ready: false,
            expert: false,
            configAsJson: "",
+           localConfig: "",
            hasCreateFormActions: false,
            invalidJson: false,
            errorMessage: ""
        }
     },
+    computed: {
+        installName: {
+            get: function() {
+                return this.localConfig.destinationWeb;
+            },
+            set: function(input) {
+                if(!this.invalidJson) {
+                    this.localConfig.destinationWeb = input;
+                    this.configAsJson = JSON.stringify(this.localConfig, null, '    ');
+                }
+            }
+        }
+    },
     methods: {
         abort: function () {
-            this.$parent.$emit('reload');
+            this.configAsJson = JSON.stringify(this.localConfig, null, '    ');
+            this.ready = false;
+            this.$parent.$emit('abort');
         },
         customInstall: function() {
-            this.$parent.$emit('customInstall', this.config);
+            this.$parent.$emit('customInstall', this.localConfig);
         },
         validateJson: function() {
             try {
-                var customConfig = JSON.parse(this.configAsJson);
-                this.config = customConfig; // causes vue warning
+                this.localConfig = JSON.parse(this.configAsJson);
                 this.errorMessage = "";
                 this.invalidJson = false;
             }
             catch(e) {
-                window.console && console.log(e.message);               
-                window.console && console.log(e.name);
                 this.errorMessage = e.message;                 
                 this.invalidJson = true;           
             }
         }   
     },
     created: function() {
-        // check if there are any createForm actions in the install config
-        for(var i = 0; i < this.config.installActions.length; i++) {
-            if(this.config.installActions[i].action == "createForm") {
-                this.hasCreateFormActions = true;
-                break;
-            }
-        }
         // make a json string out of the config object
-        this.configAsJson = JSON.stringify(this.config, null, '  ');
+        this.configAsJson = JSON.stringify(this.config, null, '    ');
+        // create a copy of the config object
+        this.localConfig = $.extend({}, this.config);
         this.ready = true;
     }
 }
