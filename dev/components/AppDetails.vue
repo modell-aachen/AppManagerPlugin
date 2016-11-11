@@ -105,7 +105,7 @@ export default {
                 result = JSON.parse(result);
                 if(result.success) {
                     swal("Installation Completed!",
-                    "App installed as " + config.destinationWeb + ".",
+                    this.hasSubConfigs(config) ? "All components installed." : "App installed as " + config.destinationWeb + ".",
                     "success");
                 } else {
                     swal("Installation Failed!", result.message, "error");
