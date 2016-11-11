@@ -4,8 +4,8 @@
             Installname
             <input type="text" v-model="installName"/>
         </template>
-        <input type="checkbox" id="expertcheckbox" v-model="expert"/>
-        <label for="expertcheckbox">Expert</label>
+        <input type="checkbox" :id="'expertCheckbox_' + config.name" v-model="expert"/>
+        <label :for="'expertCheckbox_' + config.name">Expert</label>
         <template v-if="expert">
             <p>
                 <textarea rows="16" v-model="configAsJson" v-on:input="validateJson()"></textarea>
@@ -24,7 +24,7 @@
 <script>
 
 export default {
-    props: ['config', 'index'],
+    props: ['config', 'index', 'subIndex'],
     data: function () {
        return {
            ready: false,
@@ -53,7 +53,7 @@ export default {
         abort: function () {
             this.configAsJson = JSON.stringify(this.localConfig, null, '    ');
             this.ready = false;
-            this.$parent.$emit('abort', this.index);
+            this.$parent.$emit('abort', this.index, this.subIndex);
         },
         customInstall: function() {
             this.$parent.$emit('customInstall', this.localConfig);

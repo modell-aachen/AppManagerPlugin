@@ -8,18 +8,43 @@
             <app-installed :installed="installed"></app-installed>
             <p>For installation, the following configurations are available:</p>
             <table class="ma-table">
-                <tr v-for="(config, index) in appConfig.installConfigs">
-                    <td class="top"><h3>{{config.name}}</h3></td>
-                    <td>
-                        <template v-if="!editArray[index]">
-                            <button class="button primary" v-on:click="installApp(config)">Install</button>
-                            <button class="button" v-on:click="editInstall(index)" title="Click to customize this configuration">Edit</button>
-                        </template>
-                        <template v-else>
-                            <app-edit :config="config" :index="index"></app-edit>
-                        </template>
-                    </td>
-                </tr>
+                <template v-for="(config, index) in appConfig.installConfigs">
+                    <tr>
+                        <!-- render config name -->
+                        <td class="top">
+                            <h3>{{config.name}}</h3>
+                        </td>
+                        <!-- render buttons or edit component -->
+                        <td>
+                            <template v-if="!edit[index]">
+                                <button class="button primary" v-on:click="installApp(config)">Install</button>
+                                <button v-if="!hasSubConfigs(config)" class="button" 
+                                    v-on:click="editInstall(index)" title="Click to customize this configuration">Edit</button>
+                            </template>
+                            <template v-else>
+                                <app-edit :config="config" :index="index" :subIndex="-1"></app-edit>
+                            </template>
+                        </td>
+                    </tr>
+                    <!-- render sub configs if available -->
+                    <template v-if="hasSubConfigs(config)">
+                        <tr v-for="(subConfig, subIndex) in config.subConfigs">
+                            <td class="top">
+                                <h4>{{subConfig.name}}<h4>
+                            </td>
+                            <!-- render buttons or edit component -->
+                            <td>
+                                <template v-if="!subEdit[index][subIndex]">
+                                    <button class="button primary" v-on:click="installApp(subConfig)">Install</button>
+                                    <button class="button" v-on:click="editInstallSub(index, subIndex)" title="Click customize this configuration">Edit</button>
+                                </template>
+                                <template v-else>
+                                    <app-edit :config="subConfig" :index="index" :subIndex="subIndex"></app-edit>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </template>
             </table>
         </div>
     </div>
@@ -45,15 +70,23 @@ export default {
        return {
            appConfig: '',
            installed: [],
-           edit: false,
-           editArray: [],
+           edit: [],
+           subEdit: [[]],
            ready: false
        }
     },
 
     methods: {
+        hasSubConfigs: function(config) {
+            return config.hasOwnProperty("subConfigs");
+        },
         editInstall: function(index) {
-            Vue.set(this.editArray, index, true);
+            Vue.set(this.edit, index, true);
+        },
+        editInstallSub: function(index, subIndex) {
+            var array = this.subEdit[index];
+            array[subIndex] = true;
+            Vue.set(this.subEdit, index, array);
         },
         installApp: function(config) {
             self = this;
@@ -124,7 +157,16 @@ export default {
                 var infos = JSON.parse(result);
                 self.appConfig = infos.appConfig;
                 self.installed = infos.installed;
-                self.editArray = new Array(self.appConfig.installConfigs.length).fill(false);
+                self.edit = new Array(self.appConfig.installConfigs.length).fill(false);
+                self.subEdit = [[]];
+                for(var i = 0; i < self.edit.length; i++) {
+                    if(self.appConfig.installConfigs[i].hasOwnProperty("subConfigs")) {
+                        self.subEdit[i] = new Array(self.appConfig.installConfigs[i].subConfigs.length).fill(false);
+                    }
+                    else {
+                        self.subEdit[i] = [];
+                    }
+                }
                 self.ready = true;
                 NProgress.done();
                 self.request = null;
@@ -138,8 +180,13 @@ export default {
 
     created: function() {
         this.loadDetails();
-        this.$on("abort", function(index) {
-            Vue.set(this.editArray, index, false);
+        this.$on("abort", function(index, subIndex) {
+            Vue.set(this.edit, index, false);
+            if(subIndex != -1) {
+                var array = this.subEdit[index];
+                array[subIndex] = false;
+                Vue.set(this.subEdit, index, array);
+            }
             //this.loadDetails();
         });
         this.$on("customInstall", function(config) {
@@ -163,6 +210,10 @@ export default {
     }
     h3 {
         margin: 0px;
+    }
+    h4 {
+        margin: 0px;
+        padding-left: 20px;
     }
     .top {
         vertical-align: top;
