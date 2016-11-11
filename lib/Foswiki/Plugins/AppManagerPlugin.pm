@@ -485,12 +485,10 @@ sub _installNew {
 
     # Create WebActions
     my $webActionsConfig = $installConfig->{webActionsConfig};
-
-    my ($defaultWebActionsMeta, $defaultWebActionsText) = Foswiki::Func::readTopic("System", $webActionsConfig->{viewTemplate});
-
-    Foswiki::Func::writeWarning($defaultWebActionsText);
-
-    Foswiki::Func::saveTopic($destinationWeb, "WebActions", $defaultWebActionsMeta, $defaultWebActionsText);
+    if($webActionsConfig){
+        my ($defaultWebActionsMeta, $defaultWebActionsText) = Foswiki::Func::readTopic("System", $webActionsConfig->{viewTemplate});
+        Foswiki::Func::saveTopic($destinationWeb, "WebActions", $defaultWebActionsMeta, $defaultWebActionsText);
+    }
 
     # Create WebTopicList
     Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
