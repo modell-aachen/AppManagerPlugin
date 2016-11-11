@@ -519,8 +519,6 @@ sub _uninstall {
     my ($appName,$web) = @_;
     # Move web to trash
     # (with timestamp to avoid name clashes if webs with the same name are deleted multiple times)
-    print "Uninstall\n";
-
     eval {
         Foswiki::Func::moveWeb($web, "Trash.$web".time());
     };
