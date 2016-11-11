@@ -24,7 +24,7 @@
 <script>
 
 export default {
-    props: ['config'],
+    props: ['config', 'index'],
     data: function () {
        return {
            ready: false,
@@ -53,7 +53,7 @@ export default {
         abort: function () {
             this.configAsJson = JSON.stringify(this.localConfig, null, '    ');
             this.ready = false;
-            this.$parent.$emit('abort');
+            this.$parent.$emit('abort', this.index);
         },
         customInstall: function() {
             this.$parent.$emit('customInstall', this.localConfig);

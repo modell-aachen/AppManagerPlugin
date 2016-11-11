@@ -8,15 +8,15 @@
             <app-installed :installed="installed"></app-installed>
             <p>For installation, the following configurations are available:</p>
             <table class="ma-table">
-                <tr v-for="config in appConfig.installConfigs">
+                <tr v-for="(config, index) in appConfig.installConfigs">
                     <td class="top"><h3>{{config.name}}</h3></td>
                     <td>
-                        <template v-if="!edit">
+                        <template v-if="!editArray[index]">
                             <button class="button primary" v-on:click="installApp(config)">Install</button>
-                            <button class="button" v-on:click="editInstall" title="Click to customize this configuration">Edit</button>
+                            <button class="button" v-on:click="editInstall(index)" title="Click to customize this configuration">Edit</button>
                         </template>
                         <template v-else>
-                            <app-edit :config="config"></app-edit>
+                            <app-edit :config="config" :index="index"></app-edit>
                         </template>
                     </td>
                 </tr>
@@ -33,22 +33,27 @@ import AppEdit from './AppEdit.vue'
 import AppInstalled from './AppInstalled.vue'
 
 export default {
+
     props: ['app'],
+
     components: {
         AppEdit,
         AppInstalled
     },
+
     data : function () {
        return {
            appConfig: '',
            installed: [],
            edit: false,
+           editArray: [],
            ready: false
        }
     },
+
     methods: {
-        editInstall: function() {
-            this.edit = true;
+        editInstall: function(index) {
+            Vue.set(this.editArray, index, true);
         },
         installApp: function(config) {
             self = this;
@@ -119,6 +124,7 @@ export default {
                 var infos = JSON.parse(result);
                 self.appConfig = infos.appConfig;
                 self.installed = infos.installed;
+                self.editArray = new Array(self.appConfig.installConfigs.length).fill(false);
                 self.ready = true;
                 NProgress.done();
                 self.request = null;
@@ -129,10 +135,11 @@ export default {
             });
         }
     },
+
     created: function() {
         this.loadDetails();
-        this.$on("abort", function() {
-            this.edit = false;
+        this.$on("abort", function(index) {
+            Vue.set(this.editArray, index, false);
             //this.loadDetails();
         });
         this.$on("customInstall", function(config) {
@@ -143,9 +150,8 @@ export default {
         });
         // is fired whenever the app property changes
         this.$watch("app", function(newVal, oldVal) {
-            this.edit = false;
             this.loadDetails();
-        })
+        });
     }
 }
 </script>
