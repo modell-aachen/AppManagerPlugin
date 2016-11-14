@@ -464,35 +464,36 @@ sub _installNew {
     my $webHomeMeta = undef;
     my $webHomeText = "";
 
-    if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
-        $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
-        $webHomeMeta->putAll('PREFERENCE',
-            {
-                name => 'ALLOW_TOPICCHANGE',
-                title => 'ALLOW_TOPICCHANGE',
-                value => 'AdminGroup'
-            },
-            {
-                name => 'VIEW_TEMPLATE',
-                title => 'VIEW_TEMPLATE',
-                value => $webHomeConfig->{viewTemplate}
-            },
-            {
-                name => 'TOPICTITLE',
-                title => 'TOPICTITLE',
-                value => $webHomeConfig->{topicTitle}
-            }
-        );
-    }
-    else{
-        my $templateName = $webHomeConfig->{viewTemplate};
-        unless($templateName =~ /Template$/){
-            $templateName = $templateName."Template";
+    if ($webHomeConfig){
+        if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
+            $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
+            $webHomeMeta->putAll('PREFERENCE',
+                {
+                    name => 'ALLOW_TOPICCHANGE',
+                    title => 'ALLOW_TOPICCHANGE',
+                    value => 'AdminGroup'
+                },
+                {
+                    name => 'VIEW_TEMPLATE',
+                    title => 'VIEW_TEMPLATE',
+                    value => $webHomeConfig->{viewTemplate}
+                },
+                {
+                    name => 'TOPICTITLE',
+                    title => 'TOPICTITLE',
+                    value => $webHomeConfig->{topicTitle}
+                }
+            );
         }
-        ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic("System",$templateName);
+        else{
+            my $templateName = $webHomeConfig->{viewTemplate};
+            unless($templateName =~ /Template$/){
+                $templateName = $templateName."Template";
+            }
+            ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic("System",$templateName);
+        }
+        Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
     }
-    Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
-
     # Create WebActions
     my $webActionsConfig = $installConfig->{webActionsConfig};
     if($webActionsConfig){
