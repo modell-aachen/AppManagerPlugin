@@ -519,7 +519,20 @@ sub _installNew {
     if($appContentConfig){
         my $baseDir = $appContentConfig->{baseDir};
         my $ignoredTopics = $appContentConfig->{ignore};
+        my $linkedTopics = $appContentConfig->{link};
+        if($linkedTopics){
+            push(@$ignoredTopics, @$linkedTopics);
+        }
         Foswiki::Plugins::FillWebsPlugin::_fill("_apps/".$baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
+
+        # Create symlinks
+        if($linkedTopics){
+            foreach my $topic (@$linkedTopics){
+                my $srcTopic = _getRootDir()."/data/_apps/".$baseDir."/".$topic.".txt";
+                my $destTopic = _getRootDir()."/data/".$destinationWeb."/".$topic.".txt";
+                symlink $srcTopic, $destTopic;
+            }
+        }
     }
 
     # Write the history
