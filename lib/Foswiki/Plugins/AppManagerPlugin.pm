@@ -467,6 +467,10 @@ sub _installNew {
     if ($webHomeConfig){
         if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
             $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
+            my $templateName = $webHomeConfig->{viewTemplate};
+            if($templateName =~ /Template$/){
+                $templateName =~ s/Template$/''/;
+            }
             $webHomeMeta->putAll('PREFERENCE',
                 {
                     name => 'ALLOW_TOPICCHANGE',
@@ -476,7 +480,7 @@ sub _installNew {
                 {
                     name => 'VIEW_TEMPLATE',
                     title => 'VIEW_TEMPLATE',
-                    value => $webHomeConfig->{viewTemplate}
+                    value => $templateName
                 },
                 {
                     name => 'TOPICTITLE',
@@ -497,8 +501,7 @@ sub _installNew {
     # Create WebActions
     my $webActionsConfig = $installConfig->{webActionsConfig};
     if($webActionsConfig){
-        my ($defaultWebActionsMeta, $defaultWebActionsText) = Foswiki::Func::readTopic("System", $webActionsConfig->{viewTemplate});
-        Foswiki::Func::saveTopic($destinationWeb, "WebActions", $defaultWebActionsMeta, $defaultWebActionsText);
+        Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
     }
 
     # Create WebTopicList
