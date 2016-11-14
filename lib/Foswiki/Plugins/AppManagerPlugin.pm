@@ -132,17 +132,6 @@ sub _actionCreateForm {
     Foswiki::Func::saveTopic($web, $topic, $meta, "");
 }
 
-sub _actionCopy{
-    my ($destinationWeb, $copyAction) = @_;
-
-    foreach my $webTopic (@{$copyAction->{topics}}){
-        print STDERR $webTopic."\n";
-        my ($web, $topic) = Foswiki::Func::normalizeWebTopicName('', $webTopic);
-        my ($meta, $text) = Foswiki::Func::readTopic("_apps/".$web, $topic);
-        Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, $text);
-    }
-}
-
 # Returns application details
 sub _appdetail  {
     my ($app, @bad) = @_;
@@ -455,6 +444,16 @@ sub _installNew {
     }
     Foswiki::Func::createWeb($destinationWeb);
 
+    # Execute 'create form' install actions
+    for my $action (@{$installConfig->{installActions}}) {
+        my $actionName = $action->{action};
+        if($actionName eq 'createForm'){
+            my $formName = $action->{formName};
+            my $formGroup = $action->{formGroup};
+            _actionCreateForm($destinationWeb, $formName, $formGroup);
+        }
+    }
+
     # Create WebPreferences
     my (undef, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
     $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
@@ -511,17 +510,12 @@ sub _installNew {
     # Create WebChanges
     Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
-    # Execute install actions
-    for my $action (@{$installConfig->{installActions}}) {
-        my $actionName = $action->{action};
-        if($actionName eq 'createForm'){
-            my $formName = $action->{formName};
-            my $formGroup = $action->{formGroup};
-            _actionCreateForm($destinationWeb, $formName, $formGroup);
-        }
-        elsif($actionName eq 'copy') {
-            _actionCopy($destinationWeb, $action);
-        }
+    # Create app content
+    my $appContentConfig = $installConfig->{appContent};
+    if($appContentConfig){
+        my $baseDir = $appContentConfig->{baseDir};
+        my $ignoredTopics = $appContentConfig->{ignore};
+        Foswiki::Plugins::FillWebsPlugin::_fill("_apps/".$baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
     }
 
     # Write the history
