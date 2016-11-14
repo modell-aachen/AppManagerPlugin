@@ -557,6 +557,15 @@ sub _uninstall {
     _writeHistory($appName, $history);
 }
 
+sub _installAllNew {
+    my $apps = _applistnew();
+    foreach my $app (@$apps){
+        my $appDetail = _appdetailnew($app->{id});
+        my @installConfigs = @{$appDetail->{appConfig}->{installConfigs}};
+        _installNew($appDetail->{appConfig}->{appname}, $installConfigs[0]);
+    }
+}
+
 # Check if "install" routine in conf are possible, and if mode eq 'install', install.
 # $app is mandatory,
 # $args is optional

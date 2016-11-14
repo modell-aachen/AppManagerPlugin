@@ -49,6 +49,11 @@ sub install{
 		exit;
 	}
 
+	if($appName eq 'all'){
+		Foswiki::Plugins::AppManagerPlugin::_installAllNew();
+		exit;
+	}
+
 	my $appList = Foswiki::Plugins::AppManagerPlugin::_applistnew();
 	my $appToInstall;
 	foreach my $app (@$appList){
