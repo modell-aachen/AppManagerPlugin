@@ -434,118 +434,138 @@ sub _getRootDir {
 sub _installNew {
     my ($appName, $installConfig) = @_;
 
-    # Create the web
-    my $destinationWeb = $installConfig->{destinationWeb};
-    if(Foswiki::Func::webExists($destinationWeb)){
-        return {
-            success => JSON::false,
-            message => "The $destinationWeb web already exists."
-        };
+    my @configs;
+    if ($installConfig->{subConfigs}) {
+        @configs = @{$installConfig->{subConfigs}};
     }
-    Foswiki::Func::createWeb($destinationWeb);
+    else {
+        push (@configs, $installConfig);
+    }
 
-    # Execute 'create form' install actions
-    for my $action (@{$installConfig->{installActions}}) {
-        my $actionName = $action->{action};
-        if($actionName eq 'createForm'){
-            my $formName = $action->{formName};
-            my $formGroup = $action->{formGroup};
-            _actionCreateForm($destinationWeb, $formName, $formGroup);
+    foreach my $subConfig (@configs){
+
+        # Create the web
+        my $destinationWeb = $subConfig->{destinationWeb};
+        if(Foswiki::Func::webExists($destinationWeb)){
+            return {
+                success => JSON::false,
+                message => "The $destinationWeb web already exists."
+            };
         }
-    }
-
-    # Create WebPreferences
-    my (undef, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
-    $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
-    Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", undef, $defaultWebText);
-
-    # Create WebHome
-    my $webHomeConfig = $installConfig->{webHomeConfig};
-    my $webHomeMeta = undef;
-    my $webHomeText = "";
-
-    if ($webHomeConfig){
-        if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
-            $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
-            my $templateName = $webHomeConfig->{viewTemplate};
-            if($templateName =~ /Template$/){
-                $templateName =~ s/Template$/''/;
+        my $mergedSubwebs = "";
+        foreach my $subweb (split(/\//, $destinationWeb)){
+            $mergedSubwebs = $mergedSubwebs.$subweb;
+            unless (Foswiki::Func::webExists($mergedSubwebs)) {
+                Foswiki::Func::createWeb($mergedSubwebs);
             }
-            $webHomeMeta->putAll('PREFERENCE',
-                {
-                    name => 'ALLOW_TOPICCHANGE',
-                    title => 'ALLOW_TOPICCHANGE',
-                    value => 'AdminGroup'
-                },
-                {
-                    name => 'VIEW_TEMPLATE',
-                    title => 'VIEW_TEMPLATE',
-                    value => $templateName
-                },
-                {
-                    name => 'TOPICTITLE',
-                    title => 'TOPICTITLE',
-                    value => $webHomeConfig->{topicTitle}
+            $mergedSubwebs = $mergedSubwebs."/";
+        }
+
+        # Execute 'create form' install actions
+        for my $action (@{$subConfig->{installActions}}) {
+            my $actionName = $action->{action};
+            if($actionName eq 'createForm'){
+                my $formName = $action->{formName};
+                my $formGroup = $action->{formGroup};
+                _actionCreateForm($destinationWeb, $formName, $formGroup);
+            }
+        }
+
+        # Create WebPreferences
+        my (undef, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
+        $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
+        Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", undef, $defaultWebText);
+
+        # Create WebHome
+        my $webHomeConfig = $subConfig->{webHomeConfig};
+        my $webHomeMeta = undef;
+        my $webHomeText = "";
+
+        if ($webHomeConfig){
+            if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
+                $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
+                my $templateName = $webHomeConfig->{viewTemplate};
+                if($templateName =~ /Template$/){
+                    $templateName =~ s/Template$/''/;
                 }
-            );
-        }
-        else{
-            my $templateName = $webHomeConfig->{viewTemplate};
-            unless($templateName =~ /Template$/){
-                $templateName = $templateName."Template";
+                $webHomeMeta->putAll('PREFERENCE',
+                    {
+                        name => 'ALLOW_TOPICCHANGE',
+                        title => 'ALLOW_TOPICCHANGE',
+                        value => 'AdminGroup'
+                    },
+                    {
+                        name => 'VIEW_TEMPLATE',
+                        title => 'VIEW_TEMPLATE',
+                        value => $templateName
+                    },
+                    {
+                        name => 'TOPICTITLE',
+                        title => 'TOPICTITLE',
+                        value => $webHomeConfig->{topicTitle}
+                    }
+                );
             }
-            ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic("System",$templateName);
+            else{
+                my $templateName = $webHomeConfig->{viewTemplate};
+                unless($templateName =~ /Template$/){
+                    $templateName = $templateName."Template";
+                }
+                ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic("System",$templateName);
+            }
+            Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
         }
-        Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
-    }
-    # Create WebActions
-    my $webActionsConfig = $installConfig->{webActionsConfig};
-    if($webActionsConfig){
-        Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
-    }
-
-    # Create WebTopicList
-    Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
-    # Create WebStatistics
-    my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic("System","AppManagerDefaultWebStatisticsTemplate");
-    Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
-
-    # Create WebChanges
-    Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
-    # Create app content
-    my $appContentConfig = $installConfig->{appContent};
-    if($appContentConfig){
-        my $baseDir = $appContentConfig->{baseDir};
-        my $ignoredTopics = $appContentConfig->{ignore};
-        my $linkedTopics = $appContentConfig->{link};
-        if($linkedTopics){
-            push(@$ignoredTopics, @$linkedTopics);
+        # Create WebActions
+        my $webActionsConfig = $subConfig->{webActionsConfig};
+        if($webActionsConfig){
+            Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
         }
-        Foswiki::Plugins::FillWebsPlugin::_fill("_apps/".$baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
 
-        # Create symlinks
-        if($linkedTopics){
-            foreach my $topic (@$linkedTopics){
-                my $srcTopic = _getRootDir()."/data/_apps/".$baseDir."/".$topic.".txt";
-                my $destTopic = _getRootDir()."/data/".$destinationWeb."/".$topic.".txt";
-                symlink $srcTopic, $destTopic;
+        # Create WebTopicList
+        Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+
+        # Create WebStatistics
+        my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic("System","AppManagerDefaultWebStatisticsTemplate");
+        Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
+
+        # Create WebChanges
+        Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+
+        # Create app content
+        my $appContentConfig = $subConfig->{appContent};
+        if($appContentConfig){
+            foreach my $appContent (@$appContentConfig){
+                my $baseDir = $appContent->{baseDir};
+                my $ignoredTopics = $appContent->{ignore};
+                my $linkedTopics = $appContent->{link};
+                if($linkedTopics){
+                    push(@$ignoredTopics, @$linkedTopics);
+                }
+                Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
+
+                # Create symlinks
+                if($linkedTopics){
+                    foreach my $topic (@$linkedTopics){
+                        my $srcTopic = _getRootDir()."/data/".$baseDir."/".$topic.".txt";
+                        my $destTopic = _getRootDir()."/data/".$destinationWeb."/".$topic.".txt";
+                        symlink $srcTopic, $destTopic;
+                    }
+                }
             }
         }
-    }
 
-    # Write the history
-    my $appHistory = _readHistory($appName);
-    unless($appHistory->{installed} && ref($appHistory->{installed}) eq "HASH"){
-        $appHistory->{installed} = {};
-    }
-    $appHistory->{installed}->{$destinationWeb} = {
-        "installConfig" => $installConfig,
-        "installDate" => time()
-    };
+        # Write the history
+        my $appHistory = _readHistory($appName);
+        unless($appHistory->{installed} && ref($appHistory->{installed}) eq "HASH"){
+            $appHistory->{installed} = {};
+        }
+        $appHistory->{installed}->{$destinationWeb} = {
+            "installConfig" => $subConfig,
+            "installDate" => time()
+        };
 
-    _writeHistory($appName, $appHistory);
+        _writeHistory($appName, $appHistory);
+    }
 
     return {
         success => JSON::true,
