@@ -534,6 +534,11 @@ sub _installNew {
         # Create app content
         my $appContentConfig = $subConfig->{appContent};
         if($appContentConfig){
+            if(ref($appContentConfig) eq 'HASH'){
+                my $contentConfig = $appContentConfig;
+                $appContentConfig = [$contentConfig];
+
+            }
             foreach my $appContent (@$appContentConfig){
                 my $baseDir = $appContent->{baseDir};
                 my $ignoredTopics = $appContent->{ignore};
