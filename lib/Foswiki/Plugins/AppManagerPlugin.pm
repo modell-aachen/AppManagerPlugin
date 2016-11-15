@@ -130,6 +130,7 @@ sub _actionCreateForm {
         }
     );
     Foswiki::Func::saveTopic($web, $topic, $meta, "");
+    print STDERR "Created FormManager: $topic\n";
 }
 
 # Returns application details
@@ -434,6 +435,8 @@ sub _getRootDir {
 sub _installNew {
     my ($appName, $installConfig) = @_;
 
+    print STDERR "Starting installation for $appName...\n";
+
     my @configs;
     if ($installConfig->{subConfigs}) {
         @configs = @{$installConfig->{subConfigs}};
@@ -443,8 +446,7 @@ sub _installNew {
     }
 
     foreach my $subConfig (@configs){
-
-        # Create the web
+        print STDERR "Creating web(s)...\n";
         my $destinationWeb = $subConfig->{destinationWeb};
         if(Foswiki::Func::webExists($destinationWeb)){
             return {
@@ -456,11 +458,30 @@ sub _installNew {
         foreach my $subweb (split(/\//, $destinationWeb)){
             $mergedSubwebs = $mergedSubwebs.$subweb;
             unless (Foswiki::Func::webExists($mergedSubwebs)) {
-                Foswiki::Func::createWeb($mergedSubwebs);
+                eval {
+                    Foswiki::Func::createWeb($mergedSubwebs);
+                };
             }
             $mergedSubwebs = $mergedSubwebs."/";
         }
 
+        print STDERR "Creating WebPreferences...\n";
+        # Create WebPreferences
+        my ($preferencesMeta, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
+        $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
+        if($subConfig->{webPreferences}){
+            # Add additional defined preferences
+            foreach my $pref (@{$subConfig->{webPreferences}}){
+                $preferencesMeta->putKeyed('PREFERENCE', {
+                    name => $pref->{name},
+                    title => $pref->{name},
+                    value => $pref->{value}
+                });
+            }
+        }
+        Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
+
+        print STDERR "Installing FormManagers...\n";
         # Execute 'create form' install actions
         for my $action (@{$subConfig->{installActions}}) {
             my $actionName = $action->{action};
@@ -471,17 +492,13 @@ sub _installNew {
             }
         }
 
-        # Create WebPreferences
-        my (undef, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
-        $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
-        Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", undef, $defaultWebText);
-
         # Create WebHome
         my $webHomeConfig = $subConfig->{webHomeConfig};
         my $webHomeMeta = undef;
         my $webHomeText = "";
 
         if ($webHomeConfig){
+            print STDERR "Creating WebHome...\n";
             if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
                 $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
                 my $templateName = $webHomeConfig->{viewTemplate};
@@ -515,25 +532,31 @@ sub _installNew {
             }
             Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
         }
-        # Create WebActions
+        else{
+            print STDERR "No WebHome config provided. Skipping auto generation of WebHome!\n";
+        }
         my $webActionsConfig = $subConfig->{webActionsConfig};
         if($webActionsConfig){
+            print STDERR "Creating WebActions...\n";
             Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
         }
+        else{
+            print STDERR "No WebActions config provided. Skipping auto generation of WebActions!\n";
+        }
 
-        # Create WebTopicList
+        print STDERR "Creating WebTopicList...\n";
         Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
-        # Create WebStatistics
+        print STDERR "Creating WebStatistics...\n";
         my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic("System","AppManagerDefaultWebStatisticsTemplate");
         Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
 
-        # Create WebChanges
+        print STDERR "Creating WebChanges...\n";
         Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
-        # Create app content
         my $appContentConfig = $subConfig->{appContent};
         if($appContentConfig){
+            print STDERR "Installing web content...\n";
             if(ref($appContentConfig) eq 'HASH'){
                 my $contentConfig = $appContentConfig;
                 $appContentConfig = [$contentConfig];
@@ -546,7 +569,14 @@ sub _installNew {
                 if($linkedTopics){
                     push(@$ignoredTopics, @$linkedTopics);
                 }
-                Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
+                print STDERR "Moving content from $baseDir to $destinationWeb...\n";
+                eval {
+                    Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
+                };
+                if($@){
+                    use Data::Dumper;
+                    print STDERR Dumper($@->{params});
+                }
 
                 # Create symlinks
                 if($linkedTopics){
@@ -559,7 +589,6 @@ sub _installNew {
             }
         }
 
-        # Write the history
         my $appHistory = _readHistory($appName);
         unless($appHistory->{installed} && ref($appHistory->{installed}) eq "HASH"){
             $appHistory->{installed} = {};
@@ -603,7 +632,13 @@ sub _installAllNew {
     foreach my $app (@$apps){
         my $appDetail = _appdetailnew($app->{id});
         my @installConfigs = @{$appDetail->{appConfig}->{installConfigs}};
-        _installNew($appDetail->{appConfig}->{appname}, $installConfigs[0]);
+        my $result = _installNew($appDetail->{appConfig}->{appname}, $installConfigs[0]);
+        if($result->{success} eq JSON::true){
+            print STDERR "Success!\n";
+        }
+        else{
+            print STDERR "Installation failed: ".$result->{message}."\n";
+        }
     }
 }
 
