@@ -41,9 +41,6 @@ sub install{
 	my $appName = $ARGV[1];
 	my $installName = $ARGV[2];
 
-	unless($installName){
-		$installName = "default";
-	}
 	unless($appName){
 		print "For installation please specify the app name\n";
 		exit;
@@ -66,20 +63,32 @@ sub install{
 		exit;
 	}
 	my $appDetails = Foswiki::Plugins::AppManagerPlugin::_appdetailnew($appToInstall->{id});
-	foreach my $installConfig (@{$appDetails->{appConfig}->{installConfigs}}){
-		if($installConfig->{name} eq $installName){
-			my $installResult = Foswiki::Plugins::AppManagerPlugin::_installNew($appName, $installConfig);
-			if($installResult->{success} eq "false"){
-				print "Installation failed: ";
-				print $installResult->{message}."\n";
+	my @installConfigs = @{$appDetails->{appConfig}->{installConfigs}};
+	my $configToUse;
+	if($installName){
+		foreach my $installConfig (@installConfigs){
+			if($installConfig->{name} eq $installName){
+				$configToUse = $installConfig;
 			}
-			else{
-				print "Installation finished\n";
-			}
-			exit;
 		}
 	}
-	print "No install configuration found for $installName\n";
+	else {
+		$configToUse = $installConfigs[0];
+	}
+
+	unless($configToUse){
+		print "No install configuration found for $installName\n";
+		exit;
+	}
+
+	my $installResult = Foswiki::Plugins::AppManagerPlugin::_installNew($appName, $configToUse);
+	if($installResult->{success} eq "false"){
+		print "Installation failed: ";
+		print $installResult->{message}."\n";
+	}
+	else{
+		print "Installation finished\n";
+	}
 	exit;
 }
 
