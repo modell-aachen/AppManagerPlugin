@@ -432,6 +432,45 @@ sub _getRootDir {
     return $Foswiki::cfg{TemplateDir} . '/..';
 }
 
+sub _enableMultisite {
+    if(_isMultisiteEnabled()){
+        print STDERR "Multisite is already enabled.\n";
+        return;
+    }
+    # Set SitePreferences
+    my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
+    $mainText =~ s/(\*\sSet\sMODAC_HIDEWEBS\s=\s.*)\n/$1|Settings|OUTemplate\n/;
+
+    $mainText =~ s/(\*\sSet\sSKIN\s=\scustom,)(.*)\n/$1multisite,$2\n/;
+
+    Foswiki::Func::saveTopic("Main","SitePreferences",$mainMeta,$mainText);
+
+    # Copy MultisiteWebLeftBar
+    my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic("System","MultisiteWebLeftBarDefault");
+    Foswiki::Func::saveTopic("Custom", "WebLeftBarDefault", $leftBarMeta, $leftBarText);
+}
+
+sub _disableMultisite {
+    unless(_isMultisiteEnabled()){
+        print STDERR "Multisite is already disabled\n";
+        return;
+    }
+    # Remove SitePreferences
+    my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
+    $mainText =~ s/\|Settings\|OUTemplate//;
+
+    $mainText =~ s/custom,multisite,/custom,/;
+
+    Foswiki::Func::saveTopic("Main","SitePreferences",$mainMeta,$mainText);
+
+    Foswiki::Func::moveTopic("Custom","WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/Custom","WebLeftBarDefault".time());
+}
+
+sub _isMultisiteEnabled {
+    my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
+    return ($mainText =~ /\|Settings\|OUTemplate/);
+}
+
 sub _installNew {
     my ($appName, $installConfig) = @_;
 

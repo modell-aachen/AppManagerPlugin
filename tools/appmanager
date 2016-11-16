@@ -28,6 +28,10 @@ elsif($command eq 'uninstall'){
 	uninstall();
 	exit;
 }
+elsif($command eq 'multisite'){
+	multisite();
+	exit;
+}
 
 sub printHelp{
 	print "Usage: appmanager <command> [params...]\n";
@@ -35,6 +39,19 @@ sub printHelp{
 	print "Available commands:\n";
 	print "install\n";
 	print "\tExample: appmanager install MinutesAppContrib default\n"
+}
+
+sub multisite {
+	my $operation = $ARGV[1];
+
+	if($operation eq "enable"){
+		Foswiki::Plugins::AppManagerPlugin::_enableMultisite();
+		exit;
+	}
+	elsif($operation eq "disable"){
+		Foswiki::Plugins::AppManagerPlugin::_disableMultisite();
+		exit;
+	}
 }
 
 sub install{
