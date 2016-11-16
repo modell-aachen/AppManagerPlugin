@@ -467,6 +467,10 @@ sub _disableMultisite {
     Foswiki::Func::moveTopic("Custom","WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/Custom","WebLeftBarDefault".time());
 }
 
+sub _isMultisiteAvailable {
+    return Foswiki::Func::topicExists("System", "MultisiteWebLeftBarDefault");
+}
+
 sub _isMultisiteEnabled {
     my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
     return ($mainText =~ /\|Settings\|OUTemplate/);
@@ -991,7 +995,10 @@ sub _RESTapplist {
         my $isMultisite = _isMultisiteEnabled();
         return encode_json({
             "apps" => _applistnew(),
-            "isMultisite" => $isMultisite ? JSON::true : JSON::false
+            "multisite" => {
+                "enabled" => _isMultisiteEnabled() ? JSON::true : JSON::false,
+                "available" => _isMultisiteAvailable() ? JSON::true : JSON::false
+            }
         });
     }
     else{
