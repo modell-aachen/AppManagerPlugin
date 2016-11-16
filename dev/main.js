@@ -1,4 +1,4 @@
-import Vue from 'vue/dist/vue'
+import Vue from 'vue/dist/vue.js'
 import AppList from './components/AppList.vue'
 import $ from 'jquery'
 

@@ -22,6 +22,7 @@ import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import $ from 'jquery'
 import AppDetails from './AppDetails.vue'
+
 export default {
     components: {
         AppDetails
@@ -51,7 +52,9 @@ export default {
         self = this;
         this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist?version=1")
         .done( function(result) {
-            self.apps = JSON.parse(result);
+            result = JSON.parse(result);
+            self.apps = result.apps;
+            self.multisite = result.isMultisite;
             NProgress.done();
         })
         .fail( function(xhr, status, error) {

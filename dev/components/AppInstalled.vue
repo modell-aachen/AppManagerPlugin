@@ -14,7 +14,7 @@
             </table>
         </template>
         <template v-else>
-            <p>This app is currently nowhere installed. You can install it using the buttons below.</p> 
+            <p>This app is currently nowhere installed. You can install it using the buttons below.</p>
         </template>
     </div>
 </template>
@@ -22,7 +22,7 @@
 <script>
 
 export default {
-    props: ['installed'],
+    props: ['installed', 'appname'],
     data : function () {
        return {
            ready: false,
@@ -31,7 +31,6 @@ export default {
     },
     methods: {
         uninstallApp: function (app) {
-            var parent = this.$parent;
             swal({
                 title: "Are you sure?",
                 text: "All topics of " + app + " will be moved to the Trash Web.",
@@ -45,7 +44,34 @@ export default {
             },
             function(isConfirm){
                 if (isConfirm) {
-                    parent.$emit('uninstallApp', app);
+                    self = this;
+                    if( this.request ) {
+                        return false;
+                    }
+                    NProgress.start();
+                    var requestData = {
+                        appWeb: app,
+                        appName: this.appname
+                    };
+                    this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appuninstall",
+                    requestData)
+                    .done( function(result) {
+                        result = JSON.parse(result);
+                        if(result.status == "ok") {
+                            swal("Success!",
+                            "App uninstalled",
+                            "success");
+                        } else {
+                            swal("Uninstallation Failed!", result.message, "error");
+                        }
+                        NProgress.done();
+                        self.loadDetails();
+                        self.request = null;
+                    })
+                    .fail( function(xhr, status, error) {
+                        NProgress.done();
+                        self.request = null;
+                    });
                 }
             });
         },
@@ -63,7 +89,6 @@ export default {
 .flatskin-wrapped .ma-table {
     .right {
         text-align: right;
-    }    
+    }
 }
-
 </style>

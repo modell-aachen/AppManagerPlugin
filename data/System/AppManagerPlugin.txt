@@ -1,95 +1,54 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
 
-<verbatim style="display: none;">
-%STARTSECTION{"appmanager:content"}%%JQREQUIRE{"blockui,jqp::underscore,wikiword"}%
-%ADDTOZONE{
-  "script"
-  id="APPMANAGERCONTRIB::SCRIPTS"
-  requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
-  text="<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>"
-}%
-%ADDTOZONE{
-  "head"
-  id="APPMANAGERCONTRIB::STYLES"
-  text="<link rel='stylesheet' href='%PUBURLPATH%/System/AppManagerPlugin/appmanager.css' />"
-}%
-<div id="mainContainer">
-  <div id="appMainContainer">
-    <div id="managedAppsHeader">Managed Apps</div>
-    <div id="managedAppsContainer">
-      <div class="clear"></div>
-    </div>
-    <div id="unmanagedAppsHeader">Unmanaged Apps</div>
-    <div id="unmanagedAppsContainer">
-      <div class="clear"></div>
-    </div>
-  </div>
-  <div id="appConfigContainer">
-    <div id="appConfigDescriptionHeader">Info</div>
-    <div id="appConfigDescriptionContent"></div>
-    <div id="appConfigActionsHeader">Actions</div>
-    <div id="appConfigActionsContent"></div>
-    <div id="appConfigActionsOutputHeader">Output</div>
-    <div id="appConfigActionsOutput"></div>
-  </div>
-</div>
-<br>%ENDSECTION{"appmanager:content"}%
-</verbatim>
-
-%IF{"'%WIKINAME%' ingroup 'AdminGroup'" then="$percntINCLUDE{\"%WEB%.%TOPIC%\" section=\"appmanager:content\"}$percnt"}%
-
+%TOC%
 ---++ Documentation
+To get your Conrtib recognised by the AppManager, create a file named _appconfig.json_ in your extension directory (i.e. _lib/Foswiki/Contrib/MyAppContrib/appconfig.json_).
+In the appconfig.json you can place all your default configurations, you need to install your Conrtib.
 
 ---+++ _appconfig.json_
-Create a file named _appconfig.json_ in your extension directory (i.e. _lib/Foswiki/Contrib/MyAppContrib/appconfig.json_):
 
-   * _appname_: The application name. Currently not used.
+   * _appname_: The application name.
    * _description_: The application description. You may enter <nop>%SHORTDESCRIPTION%</nop> here, it will be replaced by the AppManagerPlugin.
-   * _installname_: The default installation web. Will be used to replace <nop>%INSTALLNAME% later.
-   * _allowsCopy_: Boolean value to determine whether =AppManagerPlugin= is allowed to *copy* this application to a specified target web. Defaults to =false=.
-   * _allowsLink_: Boolean value to determine whether =AppManagerPlugin= is allowed to *symlink* this application to a specified target web. Defaults to =false=.
+   * _installConfigs_: Set of install configs.
+      * _name_: Displayname which describes the config set.
+      * _destinationWeb_: Name of the detination web.
+      * _webHomeConfig_: This object creates an WebHome Topic.
+         * _viewTemplate_: Is the given View Tempalte.
+         * _topicTitle_: Is the TopicTitle of the WebHome Topic.
+      * _webActionsConfig_: Creates a WebActionsTopic and includes the given source Topic.
 
 <pre>
-{
-    "appname": "MyAppContrib",
-    "description": "<nop>%SHORTDESCRIPTION%</nop>",
-    "installname": "MyApp",
-    "allowsCopy": true,
-    "allowsLink": true,
-    "install": [{
-      "action": "move",
-      "from": "%DATADIR%/_apps/MyApp",
-      "to": "%DATADIR%/%INSTALLNAME%"
-    },
-    {
-      "action": "replace_text",
-      "pattern": "^%META:FORM\\{name=\"MyForm\"\\}%",
-      "text": "%META:FORM{name=\"%INSTALLNAME%.MyForm\"}%",
-      "topics": [
-        "%INSTALLNAME%.MyFirstTemplate",
-        "%INSTALLNAME%.MySecondTemplate"
-      ]
-    }]
+ {
+     "appname": "MyAppContrib",
+     "description": "%<nop>SHORTDESCRIPTION%",
+     "installConfigs": [
+         {
+             "name": "My installation name",
+             "destinationWeb": "MyApp",
+             "webHomeConfig": {
+                 "viewTemplate": "MyAppWebHomeView",
+                 "topicTitle": "My App"
+             },
+             "webActionsConfig": {
+                 "sourceTopic": "MyAppDefaultWebActions"
+             },
+             "installActions": [
+                 {
+                     "action": "createForm",
+                     "formName": "MyAppForm",
+                     "formGroup": "MyApp"
+                 },
+                 {
+                     "action": "createForm",
+                     "formName": "MyAppTaskForm",
+                     "formGroup": "MyAppTask"
+                 }
+             ]
+         }
+     ]
 }
 </pre>
-
-Available variables:
-   * =%SHORTDESCRIPTION%=: Will be replaced with information from Contrib .pm file.
-   * =%INSTALLNAME%=: Will be replaced with application installname parameter or default.
-   * =%DATADIR%=: Will be replaced with, Foswiki {DataDir}.
-   * =%PUBDIR%=: Will be replaced with, Foswiki {PubDir}.
-
----++++ Action: install
-The =install array= contains all information for the execution of the =move= and =replace_text= actions.
-
-   * =move=
-      * from: Source file or directory.
-      * to: Target file or directory.
-   * =replace_text=
-      * pattern: Perl regular expression string
-      * text: The text to replace the matched text with
-      * topics: Array of topics (in webtopic syntax) to include within the search
 
 ---+++ REST handlers
 
@@ -164,17 +123,15 @@ All REST handlers are only accessible by the AdminUser.
       * ="text"=: Text meant to be displayed raw.
       * ="html"=: Text meant to inserted into page.
 
+---++ Installation
+
 ---++ Plugin Info
 
-|  Authors: | Maik Glatki, Andreas Hennes |
+|  Authors: | Modell Aachen GmbH |
 |  Copyright: | &copy; 2015, Modell Aachen GmbH |
 |  License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change&nbsp;History: | <!-- versions below in reverse order -->&nbsp; |
-|  0.3 | Change result format. Added "installall" REST handler. |
-|  0.2 | Changed appconfig.json install directives. Added appaction "diff". |
 |  0.1 | First functional prototype. |
 |  Home: | http://modell-aachen.de |
-%META:FILEATTACHMENT{name="appmanager.js" attachment="appmanager.js" attr="" comment="" date="1450175796" path="appmanager.js" size="337737" user="BaseUserMapping_333" version="1"}%
-%META:FILEATTACHMENT{name="appmanager.css" attachment="appmanager.css" attr="" comment="" date="1450175796" path="appmanager.css" size="337737" user="BaseUserMapping_333" version="1"}%
