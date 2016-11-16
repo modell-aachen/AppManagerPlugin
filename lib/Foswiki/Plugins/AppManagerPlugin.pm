@@ -38,6 +38,7 @@ sub initPlugin {
     Foswiki::Func::registerRESTHandler('appaction', \&_RESTappaction, %restopts);
     Foswiki::Func::registerRESTHandler('appuninstall', \&_RESTappuninstall, %restopts);
     Foswiki::Func::registerRESTHandler('installall', \&_RESTinstallall, %restopts);
+    Foswiki::Func::registerRESTHandler('multisite', \&_RESTmultisite, %restopts);
 
     $restopts{http_allow} = 'GET';
     Foswiki::Func::registerRESTHandler('applist',   \&_RESTapplist,   %restopts);
@@ -1062,6 +1063,22 @@ sub _RESTappuninstall {
     _uninstall($appName, $appWeb);
 
     return encode_json({"status" => "ok"});
+}
+
+sub _RESTmultisite {
+    my ($session, $subject, $verb, $response) = @_;
+
+    my $q = $session->{request};
+    my $enable = $q->param('enable');
+
+    if($enable eq JSON::true){
+        _enableMultisite();
+    }
+    elsif($enable eq JSON::false){
+        _disableMultisite();
+    }
+
+    return encode_json({"success" => JSON::true});
 }
 
 # Returns list of managed and unmanaged applications.
