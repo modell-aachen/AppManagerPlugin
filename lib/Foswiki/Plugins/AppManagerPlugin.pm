@@ -988,7 +988,11 @@ sub _RESTapplist {
         return encode_json(_texterror('Only Admins are allowed to list installed applications.'));
     }
     if($apiVersion){
-        return encode_json(_applistnew());
+        my $isMultisite = _isMultisiteEnabled();
+        return encode_json({
+            "apps" => _applistnew(),
+            "isMultisite" => $isMultisite ? JSON::true : JSON::false
+        });
     }
     else{
         return encode_json(_applist());
