@@ -5,11 +5,13 @@
         </div>
         <div class="widgetBlockContent">
             <p>{{ appConfig.description }}</p>
-            <app-installed :installed="installed" :appname="appname"></app-installed>
+            <app-installed :installed="installed" :appname="appConfig.appname"></app-installed>
             <p>For installation, the following configurations are available:</p>
             <div>
                 <template v-for="(config, index) in appConfig.installConfigs">
-                    <app-install :config="config" :app="app"></app-install>
+                    <app-install :config="config" :app="app" :depth="0"></app-install>
+                    <hr></hr>
+                    <hr></hr>
                 </template>
             </div>
         </div>
@@ -40,27 +42,21 @@ export default {
         loadDetails: function() {
             self = this;
             NProgress.start();
-            this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
+            $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
             .done( function(result) {
                 var infos = JSON.parse(result);
                 self.appConfig = infos.appConfig;
                 self.installed = infos.installed;
                 self.ready = true;
                 NProgress.done();
-                self.request = null;
             })
             .fail( function(xhr, status, error) {
                 NProgress.done();
-                self.request = null;
             });
         }
     },
     created: function() {
         this.loadDetails();
-        this.$on("uninstallApp", function(app) {
-            this.uninstallApp(app);
-        });
-        // is fired whenever the app property changes
         this.$watch("app", function(newVal, oldVal) {
             this.loadDetails();
         });

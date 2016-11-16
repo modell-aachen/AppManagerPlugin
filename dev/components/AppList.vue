@@ -1,6 +1,14 @@
 <template>
     <div class="flatskin-wrapped">
-        <div class="row">
+                <div v-if="multisite.available" class="right">
+            <template v-if="!multisite.enabled">
+                <button class="button primary" v-on:click="toggleMultisite()">Multisite enable</button>
+            </template>
+            <template v-else>
+                    <button class="button alert" v-on:click="toggleMultisite()">Multisite disable</button>
+            </template>
+        </div>
+        <div class="row expanded">
             <div class="shrink column">
             <table class="ma-table .striped">
                 <tr v-for="app in apps" v-on:click="getDetails(app.id)">
@@ -31,13 +39,55 @@ export default {
        return {
            details: false,
            appDetails: '',
+           multisite: '',
            apps: []
        }
     },
     methods: {
+        getAppList: function() {
+            NProgress.start();
+            self = this;
+            this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist?version=1")
+            .done( function(result) {
+                result = JSON.parse(result);
+                self.apps = result.apps;
+                self.multisite = result.multisite;
+                NProgress.done();
+            })
+            .fail( function(xhr, status, error) {
+                NProgress.done();
+            });
+        },
         getDetails: function(id) {
             this.appDetails = id;
             this.details = true;
+        },
+        toggleMultisite: function() {
+            NProgress.start();
+            var requestData = {
+                enable: !this.multisite.enabled,
+            };
+            $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/multisite", requestData)
+            .done( function(result) {
+                result = JSON.parse(result);
+                if(self.multisite.enabled) {
+                    var state = "Activate";
+                }else{
+                    var state = "Deactivate";
+                }
+                if(result.sucess) {
+                    swal("Success!",
+                    state + " Multisite ",
+                    "success");
+                } else {
+                    swal(state + " Multisite failed!", result.message, "error");
+                }
+                NProgress.done();
+                self.getAppList();
+            })
+            .fail( function(xhr, status, error) {
+                NProgress.done();
+            });
         }
     },
     created: function() {
@@ -48,18 +98,7 @@ export default {
                 swal("Request failed!", thrownError, "error");
         });
         NProgress.configure({ showSpinner: false });
-        NProgress.start();
-        self = this;
-        this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist?version=1")
-        .done( function(result) {
-            result = JSON.parse(result);
-            self.apps = result.apps;
-            self.multisite = result.isMultisite;
-            NProgress.done();
-        })
-        .fail( function(xhr, status, error) {
-            NProgress.done();
-        })
+        this.getAppList();
     }
 }
 </script>
@@ -73,4 +112,7 @@ export default {
         background-color: transparent;
     }
 }
+    div .right {
+        float: right;
+    }
 </style>

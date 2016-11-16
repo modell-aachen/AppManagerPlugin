@@ -1,10 +1,12 @@
 <template>
     <div>
     <div class="row align-justify">
+        <div v-if="depth > 0" class="small-1 columns">
+        </div>
         <div class="columns">
             <h3>{{config.name}}</h3>
         </div>
-        <div  class="columns right">
+        <div  class="small-6 columns right">
             <template v-if="!edit">
                 <button class="button primary" v-on:click="install(config)">Install</button>
                 <button v-if="!hasSubConfigs(config)" class="button" v-on:click="editInstall" title="Click to customize this configuration">Edit</button>
@@ -23,20 +25,16 @@
                     </p>
                 </template>
                 <p>
-                <button class="button primary" v-on:click="install()" v-bind:disabled="invalidJson" title="Install the app using this configuration">Install</button>
+                <button class="button primary" v-on:click="installCustom()" v-bind:disabled="invalidJson" title="Install the app using this configuration">Install</button>
                 <button class="button alert" v-on:click="abort()" title="Discard changes">Abort</button>
                 </p>
             </template>
         </div>
     </div>
-    <template v-if="hasSubConfigs(config)">
-        <div class="row align-justify" v-for="subConfig in config.subConfigs">
-            <div class="small-1 columns">
-            </div>
-            <div class="columns">
-                <app-install :config="subConfig" :app="app" :index="index++"></app-install>
-            </div>
-        </div>
+    <hr></hr>
+    <template v-if="hasSubConfigs(config)" v-for="subConfig in config.subConfigs">
+        <app-install :config="subConfig" :app="app" :depth="nextDepth"></app-install>
+        <hr></hr>
     </template>
     </div>
 </template>
@@ -47,7 +45,7 @@ import 'nprogress/nprogress.css'
 import $ from 'jquery'
 
 export default {
-    props: ['config', 'app', 'index'],
+    props: ['config', 'app', 'depth'],
     data: function () {
        return {
            edit: false,
@@ -59,6 +57,9 @@ export default {
        }
     },
     computed: {
+        nextDepth: function () {
+            return this.depth + 1;
+        },
         installName: {
             get: function() {
                 return this.localConfig.destinationWeb;
@@ -103,7 +104,7 @@ export default {
                 }
                 NProgress.done();
                 self.request = null;
-                self.loadDetails();
+                self.$parent.loadDetails();
             })
             .fail( function(xhr, status, error) {
                 NProgress.done();

@@ -20,6 +20,9 @@
 </template>
 
 <script>
+import NProgress from 'nprogress'
+import 'nprogress/nprogress.css'
+import $ from 'jquery'
 
 export default {
     props: ['installed', 'appname'],
@@ -31,6 +34,7 @@ export default {
     },
     methods: {
         uninstallApp: function (app) {
+            self = this;
             swal({
                 title: "Are you sure?",
                 text: "All topics of " + app + " will be moved to the Trash Web.",
@@ -44,17 +48,12 @@ export default {
             },
             function(isConfirm){
                 if (isConfirm) {
-                    self = this;
-                    if( this.request ) {
-                        return false;
-                    }
                     NProgress.start();
                     var requestData = {
                         appWeb: app,
-                        appName: this.appname
+                        appName: self.appname
                     };
-                    this.request = $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appuninstall",
-                    requestData)
+                    $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appuninstall", requestData)
                     .done( function(result) {
                         result = JSON.parse(result);
                         if(result.status == "ok") {
@@ -65,12 +64,10 @@ export default {
                             swal("Uninstallation Failed!", result.message, "error");
                         }
                         NProgress.done();
-                        self.loadDetails();
-                        self.request = null;
+                        self.$parent.loadDetails();
                     })
                     .fail( function(xhr, status, error) {
                         NProgress.done();
-                        self.request = null;
                     });
                 }
             });
