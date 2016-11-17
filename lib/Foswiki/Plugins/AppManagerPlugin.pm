@@ -367,6 +367,9 @@ sub _install {
         print STDERR "Creating WebChanges...\n";
         Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
+        print STDERR "Creating WebSearch...\n";
+        Foswiki::Func::saveTopic($destinationWeb, "WebSearch", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+
         my $appContentConfig = $subConfig->{appContent};
         if($appContentConfig){
             print STDERR "Installing web content...\n";
