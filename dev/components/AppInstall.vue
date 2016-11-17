@@ -87,7 +87,6 @@ export default {
             }
             NProgress.start();
             var requestData = {
-                    version: "1",
                     appId: this.app,
                     installConfig: JSON.stringify(config)
             };

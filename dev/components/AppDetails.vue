@@ -42,7 +42,7 @@ export default {
         loadDetails: function() {
             self = this;
             NProgress.start();
-            $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?version=1;name=" + this.app)
+            $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?name=" + this.app)
             .done( function(result) {
                 var infos = JSON.parse(result);
                 self.appConfig = infos.appConfig;
