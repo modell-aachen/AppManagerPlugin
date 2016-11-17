@@ -566,6 +566,16 @@ sub _installNew {
                         value => $webHomeConfig->{topicTitle}
                     }
                 );
+
+                if($webHomeConfig->{preferences}){
+                    foreach my $pref (@{$webHomeConfig->{preferences}}){
+                        $webHomeMeta->putKeyed('PREFERENCE', {
+                            name => $pref->{name},
+                            title => $pref->{name},
+                            value => $pref->{value}
+                        });
+                    }
+                }
             }
             else{
                 my $templateName = $webHomeConfig->{viewTemplate};
