@@ -37,8 +37,28 @@ sub printHelp{
 	print "Usage: appmanager <command> [params...]\n";
 	print "\n";
 	print "Available commands:\n";
+	print "list\n";
+		print "\tPrints a list of all apps that can be installed via AppManager.\n";
+		print "\tIt additionally prints a list of all webs where apps have been installe via AppManager.\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager uninstall MinutesAppContrib Minutes\n";
 	print "install\n";
-	print "\tExample: appmanager install MinutesAppContrib default\n"
+		print "\tInstalls an app given the app name and the install config name as params.\n";
+		print "\tIf no install config is specified then the first defined install config in the appconfig is used (default install).\n";
+		print "\tIf 'all' is used as install config parameter then all available apps are installed with the default installation.\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager install MinutesAppContrib\n";
+		print "\t\tappmanager install MinutesAppContrib Multisite\n";
+		print "\t\tappmanager install all\n";
+	print "uninstall\n";
+		print "\tUninstalls an app given the app name and the web name of the destination web used for installation.\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager uninstall MinutesAppContrib Minutes\n";
+	print "multisite\n";
+		print "\tUsed to automatically set/reset general settings for multisite Wikis (e.g. SitePreferences).\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager multisite enable\n";
+		print "\t\tappmanager multisite disable\n";
 }
 
 sub multisite {
