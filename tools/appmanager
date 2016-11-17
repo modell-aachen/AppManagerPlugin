@@ -84,11 +84,11 @@ sub install{
 	}
 
 	if($appName eq 'all'){
-		Foswiki::Plugins::AppManagerPlugin::_installAllNew();
+		Foswiki::Plugins::AppManagerPlugin::_installAll();
 		exit;
 	}
 
-	my $appList = Foswiki::Plugins::AppManagerPlugin::_applistnew();
+	my $appList = Foswiki::Plugins::AppManagerPlugin::_applist();
 	my $appToInstall;
 	foreach my $app (@$appList){
 		if($app->{name} eq $appName){
@@ -99,7 +99,7 @@ sub install{
 		print("No app configuration found for app $appName\n");
 		exit;
 	}
-	my $appDetails = Foswiki::Plugins::AppManagerPlugin::_appdetailnew($appToInstall->{id});
+	my $appDetails = Foswiki::Plugins::AppManagerPlugin::_appdetail($appToInstall->{id});
 	my @installConfigs = @{$appDetails->{appConfig}->{installConfigs}};
 	my $configToUse;
 	if($installName){
@@ -118,7 +118,7 @@ sub install{
 		exit;
 	}
 
-	my $installResult = Foswiki::Plugins::AppManagerPlugin::_installNew($appName, $configToUse);
+	my $installResult = Foswiki::Plugins::AppManagerPlugin::_install($appName, $configToUse);
 	if($installResult->{success} eq "false"){
 		print "Installation failed: ";
 		print $installResult->{message}."\n";
@@ -130,7 +130,7 @@ sub install{
 }
 
 sub list{
-	my $appList = Foswiki::Plugins::AppManagerPlugin::_applistnew();
+	my $appList = Foswiki::Plugins::AppManagerPlugin::_applist();
 	print "Apps managed by the AppManager:\n";
 	foreach my $app (@$appList){
 		print "\t".$app->{name}."\n";
