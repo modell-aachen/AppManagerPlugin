@@ -608,25 +608,39 @@ sub _installNew {
             }
             foreach my $appContent (@$appContentConfig){
                 my $baseDir = $appContent->{baseDir};
-                my $ignoredTopics = $appContent->{ignore};
-                my $linkedTopics = $appContent->{link};
+                my $ignoredTopics = $appContent->{ignore} || [];
+                my $linkedTopics = $appContent->{link} || [];
+                my $targetDir;
+                if($appContent->{targetDir}){
+                    $targetDir = $appContent->{targetDir};
+                    unless(Foswiki::Func::webExists($targetDir)){
+                        Foswiki::Func::createWeb($targetDir);
+                    }
+                }
+                else{
+                    $targetDir = $destinationWeb;
+                }
                 if($linkedTopics){
                     push(@$ignoredTopics, @$linkedTopics);
                 }
-                print STDERR "Moving content from $baseDir to $destinationWeb...\n";
+                print STDERR "Moving content from $baseDir to $targetDir...\n";
+                if($appContent->{includeWebPreferences} && $appContent->{includeWebPreferences} eq JSON::true){
+                    my ($webPrefMeta, $webPrefText) = Foswiki::Func::readTopic($baseDir, "WebPreferences");
+                    Foswiki::Func::saveTopic($targetDir, "WebPreferences", $webPrefMeta, $webPrefText);
+                }
                 eval {
-                    Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $destinationWeb, 0, "", join("|", @$ignoredTopics), 1, 10);
+                    Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $targetDir, 0, "", join("|", @$ignoredTopics), 1, 10);
                 };
                 if($@){
                     use Data::Dumper;
-                    print STDERR Dumper($@->{params});
+                    print STDERR Dumper($@);
                 }
 
                 # Create symlinks
                 if($linkedTopics){
                     foreach my $topic (@$linkedTopics){
                         my $srcTopic = _getRootDir()."/data/".$baseDir."/".$topic.".txt";
-                        my $destTopic = _getRootDir()."/data/".$destinationWeb."/".$topic.".txt";
+                        my $destTopic = _getRootDir()."/data/".$targetDir."/".$topic.".txt";
                         symlink $srcTopic, $destTopic;
                     }
                 }
