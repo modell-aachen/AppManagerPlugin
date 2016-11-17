@@ -558,7 +558,7 @@ sub _installNew {
                     {
                         name => 'VIEW_TEMPLATE',
                         title => 'VIEW_TEMPLATE',
-                        value => $templateName
+                        value => 'System.'.$templateName
                     },
                     {
                         name => 'TOPICTITLE',
