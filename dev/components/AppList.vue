@@ -1,13 +1,5 @@
 <template>
     <div class="flatskin-wrapped">
-                <div v-if="multisite.available" class="right">
-            <template v-if="!multisite.enabled">
-                <button class="button primary" v-on:click="toggleMultisite()">Multisite enable</button>
-            </template>
-            <template v-else>
-                    <button class="button alert" v-on:click="toggleMultisite()">Multisite disable</button>
-            </template>
-        </div>
         <div class="row expanded">
             <div class="shrink column">
             <table class="ma-table .striped">
@@ -20,6 +12,16 @@
             </div>
             <div class="column">
                 <app-details v-if="details" :app="appDetails"></app-details>
+            </div>
+        </div>
+        <div v-if="multisite.available" class="wrapper">
+            <div class="cmtBoxTitle">
+                <template v-if="!multisite.enabled">
+                    Multisite is not enabled: <button class="button primary" v-on:click="toggleMultisite()">enable</button>
+                </template>
+                <template v-else>
+                    Multisite is enabled: <button class="button alert" v-on:click="toggleMultisite()">disable</button>
+                </template>
             </div>
         </div>
     </div>
@@ -70,12 +72,12 @@ export default {
             $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/multisite", requestData)
             .done( function(result) {
                 result = JSON.parse(result);
-                if(self.multisite.enabled) {
+                if(!self.multisite.enabled) {
                     var state = "Activate";
                 }else{
                     var state = "Deactivate";
                 }
-                if(result.sucess) {
+                if(result.success) {
                     swal("Success!",
                     state + " Multisite ",
                     "success");
