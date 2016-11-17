@@ -95,45 +95,6 @@ sub _appdetailnew  {
     };
 }
 
-# This action is responsible for generating FormManagers
-# for a given web. It is based on the desired form name and
-# form group. FormGenerators need to be installed by the Plugin/Contrib.
-sub _actionCreateForm {
-    my ($web, $formName, $formGroup) = @_;
-    my $topic = "".$formName."Manager";
-
-    my $meta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $web, $topic);
-    $meta->putAll('PREFERENCE',
-        {
-            name => 'ALLOW_TOPICCHANGE',
-            title => 'ALLOW_TOPICCHANGE',
-            value => 'AdminGroup'
-        },
-        {
-            name => 'FormGenerator_AppControlled',
-            title => 'FormGenerator_AppControlled',
-            value => '1'
-        },
-        {
-            name => 'FormGenerator_Group',
-            title => 'FormGenerator_Group',
-            value => $formGroup
-        },
-        {
-            name => 'VIEW_TEMPLATE',
-            title => 'VIEW_TEMPLATE',
-            value => 'FormGeneratorManagerView'
-        },
-        {
-            name => 'WORKFLOW',
-            title => 'WORKFLOW',
-            value => ''
-        }
-    );
-    Foswiki::Func::saveTopic($web, $topic, $meta, "");
-    print STDERR "Created FormManager: $topic\n";
-}
-
 # Returns application details
 sub _appdetail  {
     my ($app, @bad) = @_;
@@ -525,14 +486,44 @@ sub _installNew {
         }
         Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
 
-        print STDERR "Installing FormManagers...\n";
-        # Execute 'create form' install actions
-        for my $action (@{$subConfig->{installActions}}) {
-            my $actionName = $action->{action};
-            if($actionName eq 'createForm'){
-                my $formName = $action->{formName};
-                my $formGroup = $action->{formGroup};
-                _actionCreateForm($destinationWeb, $formName, $formGroup);
+        if($subConfig->{formConfigs}){
+            print STDERR "Installing forms...\n";
+            for my $formConfig (@{$subConfig->{formConfigs}}) {
+                my $formName = $formConfig->{formName};
+                my $formGroup = $formConfig->{formGroup};
+
+                my $topic = "".$formName."Manager";
+
+                my $meta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, $topic);
+                $meta->putAll('PREFERENCE',
+                    {
+                        name => 'ALLOW_TOPICCHANGE',
+                        title => 'ALLOW_TOPICCHANGE',
+                        value => 'AdminGroup'
+                    },
+                    {
+                        name => 'FormGenerator_AppControlled',
+                        title => 'FormGenerator_AppControlled',
+                        value => '1'
+                    },
+                    {
+                        name => 'FormGenerator_Group',
+                        title => 'FormGenerator_Group',
+                        value => $formGroup
+                    },
+                    {
+                        name => 'VIEW_TEMPLATE',
+                        title => 'VIEW_TEMPLATE',
+                        value => 'FormGeneratorManagerView'
+                    },
+                    {
+                        name => 'WORKFLOW',
+                        title => 'WORKFLOW',
+                        value => ''
+                    }
+                );
+                Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                print STDERR "Created FormManager: $topic\n";
             }
         }
 
