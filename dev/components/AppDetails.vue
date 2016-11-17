@@ -4,7 +4,7 @@
             {{ appConfig.appname }}
         </div>
         <div class="widgetBlockContent">
-            <p>{{ appConfig.description }}</p>
+            <div v-html="appConfig.description"></div>
             <app-installed :installed="installed" :appname="appConfig.appname"></app-installed>
             <p>For installation, the following configurations are available:</p>
             <div>
