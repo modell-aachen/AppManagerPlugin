@@ -3,6 +3,11 @@
 
 %JQREQUIRE{"blockui,jqp::underscore,wikiword,jqp::sweetalert2"}%
 %ADDTOZONE{
+  "head"
+  id="FONTAWESOME"
+  text="<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"%PUBURLPATH%/%SYSTEMWEB%/FontAwesomeContrib/css/font-awesome.min.css\" />"
+}%
+%ADDTOZONE{
   "script"
   id="APPMANAGERCONTRIB::SCRIPTS"
   requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
