@@ -41,7 +41,7 @@ sub printHelp{
 		print "\tPrints a list of all apps that can be installed via AppManager.\n";
 		print "\tIt additionally prints a list of all webs where apps have been installe via AppManager.\n";
 		print "\tExamples:\n";
-		print "\t\tappmanager uninstall MinutesAppContrib Minutes\n";
+		print "\t\tappmanager list\n";
 	print "install\n";
 		print "\tInstalls an app given the app name and the install config name as params.\n";
 		print "\tIf no install config is specified then the first defined install config in the appconfig is used (default install).\n";
