@@ -168,12 +168,13 @@ sub _enableMultisite {
         return;
     }
     # Set SitePreferences
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
+    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
+    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
     $mainText =~ s/(\*\sSet\sMODAC_HIDEWEBS\s*=\s*.*)\n/$1|Settings|OUTemplate\n/;
 
     $mainText =~ s/(\*\sSet\sSKIN\s*=\s*custom,)(.*)\n/$1multisite,$2\n/;
 
-    Foswiki::Func::saveTopic("Main","SitePreferences",$mainMeta,$mainText);
+    Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
 
     # Copy MultisiteWebLeftBar
     my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic("System","MultisiteWebLeftBarDefault");
@@ -186,12 +187,13 @@ sub _disableMultisite {
         return;
     }
     # Remove SitePreferences
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
+    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
+    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
     $mainText =~ s/\|Settings\|OUTemplate//;
 
     $mainText =~ s/custom,multisite,/custom,/;
 
-    Foswiki::Func::saveTopic("Main","SitePreferences",$mainMeta,$mainText);
+    Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
 
     Foswiki::Func::moveTopic("Custom","WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/Custom","WebLeftBarDefault".time());
 }
@@ -201,7 +203,8 @@ sub _isMultisiteAvailable {
 }
 
 sub _isMultisiteEnabled {
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
+    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
+    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
     return ($mainText =~ /\|Settings\|OUTemplate/);
 }
 
