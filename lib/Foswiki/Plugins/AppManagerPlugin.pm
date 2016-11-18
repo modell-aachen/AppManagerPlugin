@@ -575,6 +575,11 @@ sub _RESTappuninstall {
     my $appName = $q->param('appName');
     my $appWeb = $q->param('appWeb');
 
+    if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
+        return encode_json(_texterror('Only Admins are allowed to use this.'));
+    }
+
     _uninstall($appName, $appWeb);
 
     return encode_json({"status" => "ok"});
@@ -585,6 +590,11 @@ sub _RESTmultisite {
 
     my $q = $session->{request};
     my $enable = $q->param('enable');
+
+    if (!Foswiki::Func::isAnAdmin()) {
+        $response->header(-status => 403);
+        return encode_json(_texterror('Only Admins are allowed to use this.'));
+    }
 
     if($enable eq JSON::true){
         _enableMultisite();
