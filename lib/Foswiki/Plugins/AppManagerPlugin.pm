@@ -178,7 +178,8 @@ sub _enableMultisite {
 
     # Copy MultisiteWebLeftBar
     my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic("System","MultisiteWebLeftBarDefault");
-    Foswiki::Func::saveTopic("Custom", "WebLeftBarDefault", $leftBarMeta, $leftBarText);
+    my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
+    Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText);
 }
 
 sub _disableMultisite {
@@ -195,7 +196,9 @@ sub _disableMultisite {
 
     Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
 
-    Foswiki::Func::moveTopic("Custom","WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/Custom","WebLeftBarDefault".time());
+    my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
+
+    Foswiki::Func::moveTopic($customWeb,"WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/$customWeb","WebLeftBarDefault".time());
 }
 
 sub _isMultisiteAvailable {
