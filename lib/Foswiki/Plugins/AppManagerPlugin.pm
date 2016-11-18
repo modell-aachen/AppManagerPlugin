@@ -169,9 +169,9 @@ sub _enableMultisite {
     }
     # Set SitePreferences
     my ($mainMeta, $mainText) = Foswiki::Func::readTopic("Main", "SitePreferences");
-    $mainText =~ s/(\*\sSet\sMODAC_HIDEWEBS\s=\s.*)\n/$1|Settings|OUTemplate\n/;
+    $mainText =~ s/(\*\sSet\sMODAC_HIDEWEBS\s*=\s*.*)\n/$1|Settings|OUTemplate\n/;
 
-    $mainText =~ s/(\*\sSet\sSKIN\s=\scustom,)(.*)\n/$1multisite,$2\n/;
+    $mainText =~ s/(\*\sSet\sSKIN\s*=\s*custom,)(.*)\n/$1multisite,$2\n/;
 
     Foswiki::Func::saveTopic("Main","SitePreferences",$mainMeta,$mainText);
 
