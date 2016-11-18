@@ -177,7 +177,8 @@ sub _enableMultisite {
     Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
 
     # Copy MultisiteWebLeftBar
-    my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic("System","MultisiteWebLeftBarDefault");
+    my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
+    my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic($systemWebName,"MultisiteWebLeftBarDefault");
     my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
     Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText);
 }
@@ -202,7 +203,8 @@ sub _disableMultisite {
 }
 
 sub _isMultisiteAvailable {
-    return Foswiki::Func::topicExists("System", "MultisiteWebLeftBarDefault");
+    my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
+    return Foswiki::Func::topicExists($systemWebName, "MultisiteWebLeftBarDefault");
 }
 
 sub _isMultisiteEnabled {
@@ -215,6 +217,8 @@ sub _install {
     my ($appName, $installConfig) = @_;
 
     print STDERR "Starting installation for $appName...\n";
+
+    my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
 
     my @configs;
     if ($installConfig->{subConfigs}) {
@@ -246,7 +250,7 @@ sub _install {
 
         print STDERR "Creating WebPreferences...\n";
         # Create WebPreferences
-        my ($preferencesMeta, $defaultWebText) = Foswiki::Func::readTopic("System", "AppManagerDefaultWebPreferences");
+        my ($preferencesMeta, $defaultWebText) = Foswiki::Func::readTopic($systemWebName, "AppManagerDefaultWebPreferences");
         $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
         if($subConfig->{webPreferences}){
             # Add additional defined preferences
@@ -323,7 +327,7 @@ sub _install {
                     {
                         name => 'VIEW_TEMPLATE',
                         title => 'VIEW_TEMPLATE',
-                        value => 'System.'.$templateName
+                        value => "$systemWebName.".$templateName
                     },
                     {
                         name => 'TOPICTITLE',
@@ -347,7 +351,7 @@ sub _install {
                 unless($templateName =~ /Template$/){
                     $templateName = $templateName."Template";
                 }
-                ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic("System",$templateName);
+                ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic($systemWebName,$templateName);
             }
             Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
         }
@@ -367,7 +371,7 @@ sub _install {
         Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
         print STDERR "Creating WebStatistics...\n";
-        my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic("System","AppManagerDefaultWebStatisticsTemplate");
+        my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic($systemWebName,"AppManagerDefaultWebStatisticsTemplate");
         Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
 
         print STDERR "Creating WebChanges...\n";
