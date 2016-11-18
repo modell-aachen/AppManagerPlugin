@@ -48,6 +48,17 @@ sub initPlugin {
 
 ## Internal helpers
 
+sub _printDebug {
+    my $text = shift;
+
+    if (-t STDIN) {
+        print STDERR $text;
+    }
+    else {
+        Foswiki::Func::writeWarning($text);
+    }
+}
+
 sub _getHistoryPath {
     my $app = shift;
     my $plugin = __PACKAGE__;
@@ -164,7 +175,7 @@ sub _getRootDir {
 
 sub _enableMultisite {
     if(_isMultisiteEnabled()){
-        print STDERR "Multisite is already enabled.\n";
+        _printDebug("Multisite is already enabled.\n");
         return;
     }
     # Set SitePreferences
@@ -185,7 +196,7 @@ sub _enableMultisite {
 
 sub _disableMultisite {
     unless(_isMultisiteEnabled()){
-        print STDERR "Multisite is already disabled\n";
+        _printDebug("Multisite is already disabled\n");
         return;
     }
     # Remove SitePreferences
@@ -216,7 +227,7 @@ sub _isMultisiteEnabled {
 sub _install {
     my ($appName, $installConfig) = @_;
 
-    print STDERR "Starting installation for $appName...\n";
+    _printDebug("Starting installation for $appName...\n");
 
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
 
@@ -229,7 +240,7 @@ sub _install {
     }
 
     foreach my $subConfig (@configs){
-        print STDERR "Creating web(s)...\n";
+        _printDebug("Creating web(s)...\n");
         my $destinationWeb = $subConfig->{destinationWeb};
         if(Foswiki::Func::webExists($destinationWeb)){
             return {
@@ -248,7 +259,7 @@ sub _install {
             $mergedSubwebs = $mergedSubwebs."/";
         }
 
-        print STDERR "Creating WebPreferences...\n";
+        _printDebug("Creating WebPreferences...\n");
         # Create WebPreferences
         my ($preferencesMeta, $defaultWebText) = Foswiki::Func::readTopic($systemWebName, "AppManagerDefaultWebPreferences");
         $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
@@ -265,7 +276,7 @@ sub _install {
         Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
 
         if($subConfig->{formConfigs}){
-            print STDERR "Installing forms...\n";
+            _printDebug("Installing forms...\n");
             for my $formConfig (@{$subConfig->{formConfigs}}) {
                 my $formName = $formConfig->{formName};
                 my $formGroup = $formConfig->{formGroup};
@@ -301,7 +312,7 @@ sub _install {
                     }
                 );
                 Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
-                print STDERR "Created FormManager: $topic\n";
+                _printDebug("Created FormManager: $topic\n");
             }
         }
 
@@ -311,7 +322,7 @@ sub _install {
         my $webHomeText = "";
 
         if ($webHomeConfig){
-            print STDERR "Creating WebHome...\n";
+            _printDebug("Creating WebHome...\n");
             if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
                 $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
                 my $templateName = $webHomeConfig->{viewTemplate};
@@ -356,36 +367,36 @@ sub _install {
             Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
         }
         else{
-            print STDERR "No WebHome config provided. Skipping auto generation of WebHome!\n";
+            _printDebug("No WebHome config provided. Skipping auto generation of WebHome!\n");
         }
         my $webActionsConfig = $subConfig->{webActionsConfig};
         if($webActionsConfig){
-            print STDERR "Creating WebActions...\n";
+            _printDebug("Creating WebActions...\n");
             Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
         }
         else{
-            print STDERR "No WebActions config provided. Skipping auto generation of WebActions!\n";
+            _printDebug("No WebActions config provided. Skipping auto generation of WebActions!\n");
         }
 
-        print STDERR "Creating WebTopicList...\n";
+        _printDebug("Creating WebTopicList...\n");
         Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
-        print STDERR "Creating WebStatistics...\n";
+        _printDebug("Creating WebStatistics...\n");
         my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic($systemWebName,"AppManagerDefaultWebStatisticsTemplate");
         Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
 
-        print STDERR "Creating WebChanges...\n";
+        _printDebug("Creating WebChanges...\n");
         Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
-        print STDERR "Creating WebSearch...\n";
+        _printDebug("Creating WebSearch...\n");
         Foswiki::Func::saveTopic($destinationWeb, "WebSearch", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
-        print STDERR "Creating WebSearchAdvanced...\n";
+        _printDebug("Creating WebSearchAdvanced...\n");
         Foswiki::Func::saveTopic($destinationWeb, "WebSearchAdvanced", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
         my $appContentConfig = $subConfig->{appContent};
         if($appContentConfig){
-            print STDERR "Installing web content...\n";
+            _printDebug("Installing web content...\n");
             if(ref($appContentConfig) eq 'HASH'){
                 my $contentConfig = $appContentConfig;
                 $appContentConfig = [$contentConfig];
@@ -408,7 +419,7 @@ sub _install {
                 if($linkedTopics){
                     push(@$ignoredTopics, @$linkedTopics);
                 }
-                print STDERR "Moving content from $baseDir to $targetDir...\n";
+                _printDebug("Moving content from $baseDir to $targetDir...\n");
                 if($appContent->{includeWebPreferences} && $appContent->{includeWebPreferences} eq JSON::true){
                     my ($webPrefMeta, $webPrefText) = Foswiki::Func::readTopic($baseDir, "WebPreferences");
                     Foswiki::Func::saveTopic($targetDir, "WebPreferences", $webPrefMeta, $webPrefText);
@@ -418,7 +429,7 @@ sub _install {
                 };
                 if($@){
                     use Data::Dumper;
-                    print STDERR Dumper($@);
+                    _printDebug(Dumper($@));
                 }
 
                 # Create symlinks
@@ -477,10 +488,10 @@ sub _installAll {
         my @installConfigs = @{$appDetail->{appConfig}->{installConfigs}};
         my $result = _install($appDetail->{appConfig}->{appname}, $installConfigs[0]);
         if($result->{success} eq JSON::true){
-            print STDERR "Success!\n";
+            _printDebug("Success!\n");
         }
         else{
-            print STDERR "Installation failed: ".$result->{message}."\n";
+            _printDebug("Installation failed: ".$result->{message}."\n");
         }
     }
 }
