@@ -40,7 +40,7 @@ export default {
     },
     methods: {
         loadDetails: function() {
-            self = this;
+            var self = this;
             NProgress.start();
             $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?name=" + this.app)
             .done( function(result) {

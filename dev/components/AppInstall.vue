@@ -81,7 +81,7 @@ export default {
             this.edit = false;
         },
         install: function(config) {
-            self = this;
+            var self = this;
             if( this.request ) {
                 return false;
             }

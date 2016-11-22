@@ -48,7 +48,7 @@ export default {
     methods: {
         getAppList: function() {
             NProgress.start();
-            self = this;
+            var self = this;
             this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist")
             .done( function(result) {
                 result = JSON.parse(result);

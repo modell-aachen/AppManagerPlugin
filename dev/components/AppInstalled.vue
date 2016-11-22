@@ -34,7 +34,7 @@ export default {
     },
     methods: {
         uninstallApp: function (app) {
-            self = this;
+            var self = this;
             swal({
                 title: "Are you sure?",
                 text: "All topics of " + app + " will be moved to the Trash Web.",
