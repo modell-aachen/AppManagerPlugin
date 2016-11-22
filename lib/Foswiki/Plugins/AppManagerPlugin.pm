@@ -50,8 +50,7 @@ sub initPlugin {
 
 sub _printDebug {
     my $text = shift;
-
-    if (-t STDIN) {
+    if (Foswiki::Func::getContext()->{'command_line'}) {
         print STDERR $text;
     }
     else {
