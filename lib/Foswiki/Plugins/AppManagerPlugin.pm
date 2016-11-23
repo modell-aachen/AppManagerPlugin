@@ -175,8 +175,22 @@ sub _getRootDir {
 sub _enableMultisite {
     if(_isMultisiteEnabled()){
         _printDebug("Multisite is already enabled.\n");
-        return;
+        return {
+            success => JSON::false,
+            message => "Multisite is already enabled."
+        };
     }
+    my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
+
+    # Check if there already exists a custom WebLeftBar
+    # If so, don't do anything
+    if(Foswiki::Func::topicExists($customWeb, "WebLeftBarDefault")){
+        return {
+            success => JSON::false,
+            message => "Enabling multisite creates a new WebLeftBarDefault in the custom web. Please first create a backup of the current custom WebLeftBarDefault and then delete it from the custom web in order to proceed."
+        };
+    }
+
     # Set SitePreferences
     my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
     my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
@@ -189,14 +203,21 @@ sub _enableMultisite {
     # Copy MultisiteWebLeftBar
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
     my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic($systemWebName,"MultisiteWebLeftBarDefault");
-    my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
     Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText);
+
+    return {
+        success => JSON::true,
+        message => "Multisite enabled."
+    };
 }
 
 sub _disableMultisite {
     unless(_isMultisiteEnabled()){
         _printDebug("Multisite is already disabled\n");
-        return;
+        return {
+            success => JSON::false,
+            message => "Multisite is already disabled."
+        };
     }
     # Remove SitePreferences
     my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
@@ -210,6 +231,11 @@ sub _disableMultisite {
     my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
 
     Foswiki::Func::moveTopic($customWeb,"WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/$customWeb","WebLeftBarDefault".time());
+
+    return {
+        success => JSON::true,
+        message => "Multisite disabled."
+    };
 }
 
 sub _isMultisiteAvailable {
@@ -606,14 +632,16 @@ sub _RESTmultisite {
         return encode_json(_texterror('Only Admins are allowed to use this.'));
     }
 
+    my $result;
+
     if($enable eq JSON::true){
-        _enableMultisite();
+        $result = _enableMultisite();
     }
     elsif($enable eq JSON::false){
-        _disableMultisite();
+        $result = _disableMultisite();
     }
 
-    return encode_json({"success" => JSON::true});
+    return encode_json($result);
 }
 
 1;
