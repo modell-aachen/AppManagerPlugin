@@ -69,6 +69,7 @@ export default {
             var requestData = {
                 enable: !this.multisite.enabled,
             };
+            var self = this;
             $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/multisite", requestData)
             .done( function(result) {
                 result = JSON.parse(result);
