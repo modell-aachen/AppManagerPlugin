@@ -419,6 +419,30 @@ sub _install {
         _printDebug("Creating WebSearchAdvanced...\n");
         Foswiki::Func::saveTopic($destinationWeb, "WebSearchAdvanced", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
 
+        if($subConfig->{groups}){
+            _printDebug("Processing groups...\n");
+            my @groupNames = keys(%{$subConfig->{groups}});
+            foreach my $group (@groupNames){
+                unless($group =~ /Group$/){
+                    _printDebug("Invalid group name: $group. Skipping...\n");
+                    next;
+                }
+                _printDebug("$group...\n");
+                my @members = @{$subConfig->{groups}->{$group}};
+                unless(@members){
+                    # Unfortunately the Foswiki API does not seem to offer
+                    # a more elegant way to create empty groups
+                    Foswiki::Func::addUserToGroup("AdminUser", $group, 1);
+                    Foswiki::Func::removeUserFromGroup("AdminUser", $group);
+                    next;
+                }
+
+                foreach my $member (@members){
+                    Foswiki::Func::addUserToGroup($member, $group, 1);
+                }
+            }
+        }
+
         my $appContentConfig = $subConfig->{appContent};
         if($appContentConfig){
             _printDebug("Installing web content...\n");
