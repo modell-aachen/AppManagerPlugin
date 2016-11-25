@@ -56,6 +56,7 @@ sub _printDebug {
     else {
         Foswiki::Func::writeWarning($text);
     }
+    return;
 }
 
 sub _getHistoryPath {
@@ -63,14 +64,14 @@ sub _getHistoryPath {
     my $plugin = __PACKAGE__;
     $plugin =~ s/^Foswiki::Plugins:://;
     my $work = Foswiki::Func::getWorkArea($plugin);
-    "$work/${app}_history.json";
+    return "$work/${app}_history.json";
 }
 
 sub _readHistory {
     my $app = shift;
     my $file = _getHistoryPath($app);
     my $history = Foswiki::Func::readFile($file, 1) || '{}';
-    decode_json($history);
+    return decode_json($history);
 }
 
 sub _writeHistory {
@@ -78,7 +79,7 @@ sub _writeHistory {
     my $file = _getHistoryPath($app);
     my $text = encode_json($history);
     Foswiki::Func::saveFile($file, $text, 1);
-    1;
+    return 1;
 }
 
 sub _appdetail  {
@@ -138,7 +139,7 @@ sub _getJSONConfig {
         my $fh;
         unless (open($fh, '<', $jsonPath)) {
             Foswiki::Func::writeWarning("Could not open file $jsonPath");
-            return undef;
+            return;
         } else {
             # Slurp file, read JSON
             local $/;
@@ -308,7 +309,7 @@ sub _install {
 
                 my $topic = "".$formName."Manager";
 
-                my $meta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, $topic);
+                my $meta = Foswiki::Meta->new($Foswiki::Plugins::SESSION, $destinationWeb, $topic);
                 $meta->putAll('PREFERENCE',
                     {
                         name => 'ALLOW_TOPICCHANGE',
@@ -349,7 +350,7 @@ sub _install {
         if ($webHomeConfig){
             _printDebug("Creating WebHome...\n");
             if (!$webHomeConfig->{copy} || $webHomeConfig->{copy} eq JSON::false){
-                $webHomeMeta = new Foswiki::Meta($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
+                $webHomeMeta = Foswiki::Meta->new($Foswiki::Plugins::SESSION, $destinationWeb, "WebHome");
                 my $templateName = $webHomeConfig->{viewTemplate};
                 if($templateName =~ /Template$/){
                     $templateName =~ s/Template$/''/;
@@ -528,6 +529,7 @@ sub _uninstall {
     delete $installed{$web};
     $history->{installed} = \%installed;
     _writeHistory($appName, $history);
+    return;
 }
 
 sub _installAll {
@@ -543,6 +545,7 @@ sub _installAll {
             _printDebug("Installation failed: ".$result->{message}."\n");
         }
     }
+    return;
 }
 
 # Return text error.
