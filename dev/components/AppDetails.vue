@@ -44,7 +44,13 @@ export default {
             NProgress.start();
             $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?name=" + this.app)
             .done( function(result) {
-                var infos = JSON.parse(result);
+                try{
+                    var infos = JSON.parse(result);
+                }catch(e){
+                    swal("App JSON invalid!", String(e), "error");
+                    NProgress.done();
+                    return
+                }
                 self.appConfig = infos.appConfig;
                 self.installed = infos.installed;
                 self.ready = true;

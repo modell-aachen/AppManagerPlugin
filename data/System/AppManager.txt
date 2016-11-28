@@ -28,3 +28,4 @@
    <app-list></app-list>
 </div>
 
+%META:PREFERENCE{name="ALLOWTOPICVIEW" title="ALLOWTOPICVIEW" type="Set" value="AdminUser"}%
