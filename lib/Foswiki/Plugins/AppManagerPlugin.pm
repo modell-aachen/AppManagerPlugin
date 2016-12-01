@@ -480,6 +480,13 @@ sub _install {
                 if($@){
                     use Data::Dumper;
                     _printDebug(Dumper($@));
+                    eval {
+                        Foswiki::Func::moveWeb($destinationWeb, "Trash.$destinationWeb".time());
+                    };
+                    return {
+                        success => JSON::false,
+                        message => "Installation failed: Could not copy app content. Is the FillWebsPlugin installed?"
+                    };
                 }
 
                 # Create symlinks
