@@ -5,7 +5,7 @@ use warnings;
 use Data::Dumper;
 do '../bin/setlib.cfg';
 require Foswiki;
-new Foswiki('admin');
+Foswiki->new('admin');
 
 require Foswiki::Plugins::AppManagerPlugin;
 
@@ -64,6 +64,7 @@ sub printHelp{
 		print "\tExamples:\n";
 		print "\t\tappmanager multisite enable\n";
 		print "\t\tappmanager multisite disable\n";
+	return;
 }
 
 sub multisite {
@@ -140,7 +141,7 @@ sub list{
 	foreach my $app (@$appList){
 		print "\t".$app->{name}."\n";
 		my $history = Foswiki::Plugins::AppManagerPlugin::_readHistory($app->{name});
-		if($history->{installed} && ref($history->{installed}) eq "HASH"){
+		if($history->{installed} && ref($history->{installed}) eq "HASH" && %{$history->{installed}}){
 			print "\t\tInstalled in: ";
 			print join(",",keys(%{$history->{installed}}))."\n";
 		}
