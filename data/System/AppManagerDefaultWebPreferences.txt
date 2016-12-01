@@ -30,3 +30,5 @@ Users or groups allowed to change or rename this <nop>%TOPIC% topic: (e.g., [[%U
 ---
 
 %INCLUDE{"%SYSTEMWEB%.WebPreferencesHelp"}%
+
+%META:PREFERENCE{name="NOWYSIWYG" title="NOWYSIWYG" type="Local" value="1"}%
