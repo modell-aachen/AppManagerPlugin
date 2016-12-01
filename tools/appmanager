@@ -32,6 +32,11 @@ elsif($command eq 'multisite'){
 	multisite();
 	exit;
 }
+else{
+	print "Unknown command!\n";
+	printHelp();
+	exit;
+}
 
 sub printHelp{
 	print "Usage: appmanager <command> [params...]\n";
