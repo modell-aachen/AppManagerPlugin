@@ -1,0 +1,34 @@
+%TOC%
+
+<sticky>
+<div class="%IF{"not context PreferencesPluginEnabled" then="foswikiHidden"}%">
+%EDITPREFERENCES{"%SYSTEMWEB%.DefaultPreferencesForm"}%
+</div>
+</sticky>
+
+---++ Project Settings
+
+   * Set DEFAULT_SOURCES = <DEFAULT_SOURCES_PREFERENCE>
+      * See <a href="#defaultPrefs">Default Preferences</a>
+
+---++ Access control
+
+Users or groups who are allowed to view, change and rename topics in the <nop>%WEB% web.
+Remember that an empty setting is a valid setting; setting DENYWEBVIEW to nothing means that anyone can view the web.
+
+   * Set DENYWEBVIEW = WikiGuest
+   * Set ALLOWWEBVIEW =
+   * Set DENYWEBCHANGE = WikiGuest
+   * Set ALLOWWEBCHANGE =
+   * Set DENYWEBRENAME = WikiGuest
+   * Set ALLOWWEBRENAME =
+
+Users or groups allowed to change or rename this <nop>%TOPIC% topic: (e.g., [[%USERSWEB%.AdminGroup][AdminGroup]])
+
+   * Set ALLOWTOPICCHANGE = KeyUserGroup
+   * Set ALLOWTOPICRENAME = KeyUserGroup
+---
+
+%INCLUDE{"%SYSTEMWEB%.WebPreferencesHelp"}%
+
+%META:PREFERENCE{name="NOWYSIWYG" title="NOWYSIWYG" type="Local" value="1"}%
