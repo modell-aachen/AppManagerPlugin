@@ -289,16 +289,14 @@ sub _install {
         # Create WebPreferences
         my ($preferencesMeta, $defaultWebText) = Foswiki::Func::readTopic($systemWebName, "AppManagerDefaultWebPreferences");
         $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
+        my $additionalWebPreferences = "";
         if($subConfig->{webPreferences}){
             # Add additional defined preferences
             foreach my $pref (@{$subConfig->{webPreferences}}){
-                $preferencesMeta->putKeyed('PREFERENCE', {
-                    name => $pref->{name},
-                    title => $pref->{name},
-                    value => $pref->{value}
-                });
+                $additionalWebPreferences = $additionalWebPreferences."   * Set $pref->{name} = $pref->{value}\n";
             }
         }
+        $defaultWebText =~ s/<ADDITIONAL_PREFERENCES>/$additionalWebPreferences/;
         Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
 
         if($subConfig->{formConfigs}){
