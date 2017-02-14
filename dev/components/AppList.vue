@@ -11,7 +11,7 @@
             </table>
             </div>
             <div class="column">
-                <app-details v-if="details" :app="appDetails"></app-details>
+                <app-details v-if="details" :app="appDetails" :multisite-enabled="multisite.enabled"></app-details>
             </div>
         </div>
         <div v-if="multisite.available">

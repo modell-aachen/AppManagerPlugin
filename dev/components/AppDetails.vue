@@ -9,7 +9,7 @@
             <p>For installation, the following configurations are available:</p>
             <div>
                 <template v-for="(config, index) in appConfig.installConfigs">
-                    <app-install :config="config" :app="app" :depth="0"></app-install>
+                    <app-install :config="config" :app="app" :depth="0" :multisite-enabled="multisiteEnabled"></app-install>
                     <hr></hr>
                     <hr></hr>
                 </template>
@@ -26,7 +26,7 @@ import AppInstall from './AppInstall.vue'
 import AppInstalled from './AppInstalled.vue'
 
 export default {
-    props: ['app'],
+    props: ['app','multisiteEnabled'],
     components: {
         AppInstalled,
         AppInstall
