@@ -121,6 +121,10 @@ sub _applist {
     for my $appConfigPath (@configs) {
         my $appConfig = _getJSONConfig($appConfigPath);
         if ($appConfig) {
+            # Do not list the multisite install as it is handled separately
+            if($appConfig->{appname} eq 'MultisiteAppContrib'){
+                next;
+            }
             push(@$appList, {
                 id => $appConfigPath,
                 name => $appConfig->{appname}
@@ -206,6 +210,12 @@ sub _enableMultisite {
     my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic($systemWebName,"MultisiteWebLeftBarDefault");
     Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText);
 
+
+    # Install the MultisiteAppContrib
+    my $appConfig = _getJSONConfig(_getRootDir().'/lib/Foswiki/Contrib/MultisiteAppContrib/appconfig_new.json');
+    my $appName = $appConfig->{appname};
+    _install($appName, $appConfig->{installConfigs}[0]);
+
     return {
         success => JSON::true,
         message => "Multisite enabled."
@@ -220,6 +230,11 @@ sub _disableMultisite {
             message => "Multisite is already disabled."
         };
     }
+
+    #Uninstall the Settings and OUTemplate webs
+    _uninstall('MultisiteAppContrib', 'Settings');
+    _uninstall('MultisiteAppContrib', 'OUTemplate');
+
     # Remove SitePreferences
     my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
     my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
@@ -231,6 +246,7 @@ sub _disableMultisite {
 
     my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
 
+    # Remove multisite WebLeftBarDefault
     Foswiki::Func::moveTopic($customWeb,"WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/$customWeb","WebLeftBarDefault".time());
 
     return {
