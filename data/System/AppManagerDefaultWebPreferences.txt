@@ -10,7 +10,6 @@
 
    * Set DEFAULT_SOURCES = <DEFAULT_SOURCES_PREFERENCE>
       * See <a href="#defaultPrefs">Default Preferences</a>
-<ADDITIONAL_PREFERENCES>
 
 ---++ Access control
 

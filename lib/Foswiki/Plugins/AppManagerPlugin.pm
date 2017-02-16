@@ -197,13 +197,20 @@ sub _enableMultisite {
     }
 
     # Set SitePreferences
-    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
-    $mainText =~ s/(\*\sSet\sMODAC_HIDEWEBS\s*=\s*.*)\n/$1|Settings|OUTemplate\n/;
-
-    $mainText =~ s/(\*\sSet\sSKIN\s*=\s*custom,)(.*)\n/$1multisite,$2\n/;
-
-    Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
+    _setOnPreferences({}, [
+        {
+            name => 'MODAC_HIDEWEBS',
+            pattern => qr($),
+            format => '|Settings|OUTemplate',
+            skip => '\|Settings\|OUTemplate\b',
+        },
+        {
+            name => 'SKIN',
+            pattern => qr((\bcustom\s*,|^(?!\bcustom\s*,))), # matches 'custom,' if it exists, start anchor otherwise
+            format => '$1multisite,',
+            skip => '\bmultisite\b',
+        }
+    ]);
 
     # Copy MultisiteWebLeftBar
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
@@ -222,6 +229,140 @@ sub _enableMultisite {
     };
 }
 
+# Parameters:
+#    * settings: See SetOnPreferencesText
+sub _setOnPreferences {
+    my ($config, $settings, $altSection, $webtopic) = @_;
+
+    my ($web, $topic, $meta, $text);
+    unless (ref $webtopic) {
+        $webtopic ||= $Foswiki::cfg{'LocalSitePreferences'};
+        ($web, $topic) = Foswiki::Func::normalizeWebTopicName('', $webtopic);
+        ($meta, $text) = Foswiki::Func::readTopic($web, $topic);
+    } else {
+        $meta = $webtopic;
+        $web = $meta->web();
+        $topic = $meta->topic();
+        $text = $meta->text();
+    }
+
+    $text = _setOnPreferencesText($config, $settings, $text, $altSection);
+
+    Foswiki::Func::saveTopic($web, $topic, $meta, $text);
+}
+
+# Parameters:
+#    * settings: array of settings to set, each item being a hash with options
+#      as described in the plugin doku
+#       * skip: when old value matches this regex, keep old value
+#    * text: the text of a preferences topic
+#    * altHeadnings: default for settings.altHeadings; defaults itself to
+#      ['Modell Aachen Settings', 'Project Settings']
+#
+# Returns:
+#    * modified text
+sub _setOnPreferencesText {
+    my ($config, $settings, $text, $altHeadings) = @_;
+
+    $altHeadings = ['Modell Aachen Settings', 'Project Settings'] unless $altHeadings && scalar @$altHeadings;
+
+    # will replace &{settingname} with the actual config->{settingname} value
+    # will not replace \${...}
+    my $_settify = sub {
+        my ($text) = @_;
+        $text =~ s#(?<!\\)\&\{([^}]*)\}#defined $config->{$1} ? $config->{$1} : ''#ge;
+
+        return $text;
+    };
+
+    # returns a "   * Set NAME = Value" string
+    # Parameters:
+    #    * setString: first part of the setting "   * Set NAME = "
+    #    * oldValue: the current value; used as fallback
+    #    * vSettings: settings for the value
+    my $_getSetString = sub {
+        my ($setString, $oldValue, $vSettings) = @_;
+
+        return '' if $vSettings->{remove};
+
+        my $value = $oldValue;
+
+        my $doSkip;
+        if(defined $vSettings->{skip}) {
+            my $skip = $vSettings->{skip};
+            $skip = &$_settify($skip);
+
+            $doSkip = 1 if $value =~ m#$skip#;
+        }
+
+        unless ($doSkip) {
+            if(defined $vSettings->{pattern}) {
+                my $format = $vSettings->{format};
+                $format = '' unless defined $format;
+                $format = '"'.$format.'"'; # prepare for the ee flag
+
+                my $pattern = $vSettings->{pattern};
+                $pattern = &$_settify($pattern);
+
+                unless ($value =~ s/$pattern/$format/ee) {
+                    $value = $vSettings->{value} if defined $vSettings->{value};
+                }
+            } elsif(defined $vSettings->{value}) {
+                $value = $vSettings->{value};
+            }
+
+            $value = &$_settify($value);
+        }
+
+        return "$setString$value";
+    };
+
+    foreach my $setting (@$settings) {
+        my $name = $setting->{name};
+        unless ($name) {
+            # XXX this warning is not ideal, since it does not tell which app
+            # or configuration is faulty
+            Foswiki::Func::writeWarning("Invalid setting had no name");
+            next;
+        }
+
+        # try find/replace an old value first
+        # note: not using $Foswiki::regex{setRegex}, because it also matches
+        # 'Local'
+        unless($text =~ s/($Foswiki::regex{bulletRegex}\h+Set\h+\Q$name\E\h*=\h*)(.*)/&$_getSetString($1, $2, $setting)/me) {
+            # Ok, we did not find an old value
+
+            # Do we want a value?
+            next if $setting->{remove};
+
+            # Do nothing if we have no fallback
+            unless (defined $setting->{value}) {
+                Foswiki::Func::writeWarning("Invalid setting had no value or pattern") unless defined $setting->{pattern};
+                next;
+            }
+
+            # let's insert after the marker
+            my $heading;
+            my $headings = $setting->{altHeadings} || $altHeadings;
+            foreach my $h (@$headings) {
+                next unless ($text =~ m/^---\++\h*\Q$h\E\s*$/m);
+                $heading = $h;
+                last;
+            }
+            unless ($heading) {
+                # this should normally not happen, thus an ugly fallback should be
+                # sufficient
+                $heading = $headings->[0];
+                $text = "---++ $heading\n\n$text";
+            }
+            my $value = &$_settify($setting->{value});
+            $text =~ s/(^---\++\h*\Q$heading\E\s*\n)/$1   * Set $setting->{name} = $value\n/m;
+        }
+    }
+
+    return $text;
+}
+
 sub _disableMultisite {
     unless(_isMultisiteEnabled()){
         _printDebug("Multisite is already disabled\n");
@@ -236,13 +377,18 @@ sub _disableMultisite {
     _uninstall('MultisiteAppContrib', 'OUTemplate');
 
     # Remove SitePreferences
-    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
-    $mainText =~ s/\|Settings\|OUTemplate//;
-
-    $mainText =~ s/custom,multisite,/custom,/;
-
-    Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
+    _setOnPreferences({}, [
+        {
+            name => 'MODAC_HIDEWEBS',
+            format => '',
+            pattern => qr(\|Settings\|OUTemplate),
+        },
+        {
+            name => 'SKIN',
+            format => '',
+            pattern => qr(multisite,),
+        },
+    ]);
 
     my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
 
@@ -307,13 +453,14 @@ sub _install {
         $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
         my $additionalWebPreferences = "";
         if($subConfig->{webPreferences}){
-            # Add additional defined preferences
-            foreach my $pref (@{$subConfig->{webPreferences}}){
-                $additionalWebPreferences = $additionalWebPreferences."   * Set $pref->{name} = $pref->{value}\n";
-            }
+            $defaultWebText = _setOnPreferencesText($subConfig, $subConfig->{webPreferences}, $defaultWebText);
         }
-        $defaultWebText =~ s/<ADDITIONAL_PREFERENCES>/$additionalWebPreferences/;
         Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
+
+        # Modify SitePreferences
+        if($subConfig->{sitePreferences} && $subConfig->{destinationWeb} !~ m/^_/) {
+            _setOnPreferences($subConfig, $subConfig->{sitePreferences});
+        }
 
         if($subConfig->{formConfigs}){
             _printDebug("Installing forms...\n");

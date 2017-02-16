@@ -17,9 +17,17 @@ The appconfig.json file has to define an app configuration object. The following
    * __installConfigs__: Array of installation configuration objects. The first object in the array will be considered as the default installation.
       * __name__: Name of the installation.
       * __destinationWeb__: Name of the web in which the app should be installed.
-      * _webPreferences_: An array of objects defining preferences to be set in the WebPreferences.
+      * _webPreferences_: An array of objects defining preferences to be set in the WebPreferences. Will be skipped when web starts with an underscore '_'.
          * __name__: The name of the preference.
-         * __value__: The value of the preference.
+         * __value__: The value of the preference. Use =&{...}= to get the value of a setting, eg. =&{destinationWeb}= will expand to the destination web.
+         * __pattern__: Regex to apply to the _current_ value (left hand of a =s/pattern/.../g= substitution); fallback to __value__ when it does not match; fallback to original value, when __value__ is not set. You can also use the =&{...}= syntax.
+         * __format__: Format to apply to the regex result (right hand of a =s/.../format/g= substitution). You can also use the =&{...}= syntax.
+         * __remove__: Remove this setting, when perl-true.
+         * __altHeading__: If setting does not exist yet, attempt to put it after this heading.
+            * When the heading does not exist: create it.
+            * When this is an array, search for each entry and create the first one, should none be found.
+            * defaults to =['Modell Aachen Settings', 'Project Settings']=
+      * _sitePreferences_: Same as _webPreferences_, but applies to [[%QUERY{"{LocalSitePreferences}"}%]]
       * _webHomeConfig_: An object defining how WebHome should be generated.
          * __viewTemplate__: The view template used for rendering WebHome. It needs to be installed in the System web.
          * __topicTitle__: The TopicTitle of the WebHome Topic.
