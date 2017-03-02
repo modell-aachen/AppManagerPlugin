@@ -42,9 +42,10 @@ The appconfig.json file has to define an app configuration object. The following
       * _groups_: An object describing which groups to create and members to add. E.g.: _{ GreatGroup: ["AdminUser"] }_. Use an empty array to create an empty group (if it does not already exist).
       * _appContent_: Either an array of app content configurations or a single app content configuration object.
          * __baseDir__: The web from which content needs to be copied or linked.
-         * _targetDir_: The web to which content should be copied. If not set it defaults to the destinationWeb.
-         * _ingore_: An array of topic names or regexes to ignore from copying.
-         * _link_: An array of topic names to be linked instead of copied.
+         * __targetDir__: The web to which content should be copied. If not set it defaults to the destinationWeb.
+         * __ingore__: An array of topic names or regexes to ignore from copying.
+         * __alwaysCopy__: An array of regexes, that overwrite __ignore__ and also _devirtualize_ topics.
+         * __link__: An array of topic names to be linked instead of copied.
       * _subConfigs_: Instead of setting all the install configurations above (except for name) this config can be set to an array of installation configuration objects. This way the installation can be split into multiple installation subparts. See the example below to get the idea.
 
 <pre>

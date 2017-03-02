@@ -500,7 +500,9 @@ sub _install {
                         value => ''
                     }
                 );
-                Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                _vAction(sub{
+                    Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                });
                 _printDebug("Created FormManager: $topic\n");
             }
         }
@@ -553,7 +555,9 @@ sub _install {
                 }
                 ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic($systemWebName,$templateName);
             }
-            Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
+            _vAction(sub{
+                Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
+            });
         }
         else{
             _printDebug("No WebHome config provided. Skipping auto generation of WebHome!\n");
@@ -561,27 +565,25 @@ sub _install {
         my $webActionsConfig = $subConfig->{webActionsConfig};
         if($webActionsConfig){
             _printDebug("Creating WebActions...\n");
-            Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
+            _vAction(sub{
+                Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
+            });
         }
         else{
             _printDebug("No WebActions config provided. Skipping auto generation of WebActions!\n");
         }
 
-        _printDebug("Creating WebTopicList...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
         _printDebug("Creating WebStatistics...\n");
         my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic($systemWebName,"AppManagerDefaultWebStatisticsTemplate");
         Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
 
-        _printDebug("Creating WebChanges...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
-        _printDebug("Creating WebSearch...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebSearch", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
-        _printDebug("Creating WebSearchAdvanced...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebSearchAdvanced", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+        # Note: All these could already be virtual topics
+        foreach my $systemTopic ( qw(WebChanges WebSearch WebSearchAdvanced WebTopicList) ) {
+            unless(Foswiki::Func::topicExists($destinationWeb, $systemTopic)) {
+                _printDebug("Creating $systemTopic...\n");
+                Foswiki::Func::saveTopic($destinationWeb, $systemTopic, undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+            }
+        }
 
         if($subConfig->{groups}){
             _printDebug("Processing groups...\n");
@@ -618,6 +620,7 @@ sub _install {
             foreach my $appContent (@$appContentConfig){
                 my $baseDir = $appContent->{baseDir};
                 my $ignoredTopics = $appContent->{ignore} || [];
+                my $alwaysCopyTopics = $appContent->{alwaysCopy};
                 my $linkedTopics = $appContent->{link} || [];
                 my $targetDir;
                 if($appContent->{targetDir}){
@@ -632,13 +635,24 @@ sub _install {
                 if($linkedTopics){
                     push(@$ignoredTopics, @$linkedTopics);
                 }
+                my $alwaysCopyReg;
+                if(defined $alwaysCopyTopics) {
+                    $alwaysCopyReg = join("|", @$alwaysCopyTopics);
+                }
                 _printDebug("Moving content from $baseDir to $targetDir...\n");
                 if($appContent->{includeWebPreferences} && $appContent->{includeWebPreferences} eq JSON::true){
                     my ($webPrefMeta, $webPrefText) = Foswiki::Func::readTopic($baseDir, "WebPreferences");
                     Foswiki::Func::saveTopic($targetDir, "WebPreferences", $webPrefMeta, $webPrefText);
                 }
                 eval {
-                    Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $targetDir, 0, "", join("|", @$ignoredTopics), 1, 10);
+                    Foswiki::Plugins::FillWebsPlugin::fill({
+                        srcWeb => $baseDir,
+                        recurseSrc => 0,
+                        targetWeb => $targetDir,
+                        recurseTarget => 0,
+                        skipTopics => join("|", @$ignoredTopics),
+                        unskipTopics => $alwaysCopyReg
+                    });
                 };
                 if($@){
                     use Data::Dumper;
@@ -655,6 +669,7 @@ sub _install {
                 # Create symlinks
                 if($linkedTopics){
                     foreach my $topic (@$linkedTopics){
+                        next if $alwaysCopyReg && $topic =~ m#$alwaysCopyReg#;
                         my $srcTopic = _getRootDir()."/data/".$baseDir."/".$topic.".txt";
                         my $destTopic = _getRootDir()."/data/".$targetDir."/".$topic.".txt";
                         symlink $srcTopic, $destTopic;
@@ -679,6 +694,15 @@ sub _install {
         success => JSON::true,
         message => "OK"
     };
+}
+
+sub _vAction {
+    if($Foswiki::Plugins::SESSION->{store}->can('doWithoutVirtualTopics')) {
+        $Foswiki::Plugins::SESSION->{store}->doWithoutVirtualTopics(@_);
+    } else {
+        my $sub = shift;
+        &$sub(@_);
+    }
 }
 
 sub _uninstall {
