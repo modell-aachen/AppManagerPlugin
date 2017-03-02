@@ -264,7 +264,7 @@ sub _setOnPreferences {
 sub _setOnPreferencesText {
     my ($config, $settings, $text, $altHeadings) = @_;
 
-    $altHeadings = ['Modell Aachen Settings', 'Project Settings'] unless $altHeadings && scalar @$altHeadings;
+    $altHeadings = ['Modell Aachen Settings', 'Project Settings'] unless $altHeadings && (not ref $altHeadings || scalar @$altHeadings);
 
     # will replace &{settingname} with the actual config->{settingname} value
     # will not replace \${...}
@@ -343,7 +343,9 @@ sub _setOnPreferencesText {
 
             # let's insert after the marker
             my $heading;
-            my $headings = $setting->{altHeadings} || $altHeadings;
+            my $headings = $setting->{altHeadings};
+            $headings = $altHeadings unless defined $headings && ((not ref $headings) || scalar @$headings);
+            $headings = [$headings] unless ref $headings;
             foreach my $h (@$headings) {
                 next unless ($text =~ m/^---\++\h*\Q$h\E\s*$/m);
                 $heading = $h;
