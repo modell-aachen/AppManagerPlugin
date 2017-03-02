@@ -719,7 +719,7 @@ sub _uninstall {
 
     # Remove from history
     my $history = _readHistory($appName);
-    my %installed = %{$history->{installed}};
+    my %installed = %{$history->{installed} || {}};
     delete $installed{$web};
     $history->{installed} = \%installed;
     _writeHistory($appName, $history);
