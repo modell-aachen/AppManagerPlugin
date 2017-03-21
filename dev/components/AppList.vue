@@ -33,9 +33,9 @@
 </template>
 
 <script>
+/* global $ */
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import $ from 'jquery'
 import AppDetails from './AppDetails.vue'
 
 export default {

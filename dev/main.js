@@ -1,8 +1,5 @@
-import Vue from 'vue/dist/vue.js'
+/* global $ Vue */
 import AppList from './components/AppList.vue'
-import $ from 'jquery'
-
-window.Vue = Vue;
 
 $( function () {
     new Vue({

@@ -20,9 +20,9 @@
 </template>
 
 <script>
+/* global $ */
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import $ from 'jquery'
 
 export default {
     props: ['installed', 'appname'],

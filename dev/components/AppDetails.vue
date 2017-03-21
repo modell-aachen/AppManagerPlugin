@@ -19,9 +19,9 @@
 </template>
 
 <script>
+/* global $ */
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import $ from 'jquery'
 import AppInstall from './AppInstall.vue'
 import AppInstalled from './AppInstalled.vue'
 
