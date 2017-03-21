@@ -33,10 +33,10 @@
 </template>
 
 <script>
-/* global $ */
-import NProgress from 'nprogress'
-import 'nprogress/nprogress.css'
-import AppDetails from './AppDetails.vue'
+/* global $ swal foswiki */
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
+import AppDetails from './AppDetails.vue';
 
 export default {
     components: {
@@ -48,12 +48,12 @@ export default {
            appDetails: '',
            multisite: '',
            apps: []
-       }
+       };
     },
     methods: {
         getAppList: function() {
             NProgress.start();
-            var self = this;
+            let self = this;
             this.request = $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/applist")
             .done( function(result) {
                 result = JSON.parse(result);
@@ -61,7 +61,7 @@ export default {
                 self.multisite = result.multisite;
                 NProgress.done();
             })
-            .fail( function(xhr, status, error) {
+            .fail( function() {
                 NProgress.done();
             });
         },
@@ -71,17 +71,18 @@ export default {
         },
         toggleMultisite: function() {
             NProgress.start();
-            var requestData = {
+            let requestData = {
                 enable: !this.multisite.enabled,
             };
-            var self = this;
+            let self = this;
             $.post(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/multisite", requestData)
             .done( function(result) {
+                let state;
                 result = JSON.parse(result);
                 if(!self.multisite.enabled) {
-                    var state = "Activate";
+                    state = "Activate";
                 }else{
-                    var state = "Deactivate";
+                    state = "Deactivate";
                 }
                 if(result.success) {
                     swal("Success!",
@@ -93,7 +94,7 @@ export default {
                 NProgress.done();
                 self.getAppList();
             })
-            .fail( function(xhr, status, error) {
+            .fail( function() {
                 NProgress.done();
             });
         }
@@ -108,7 +109,7 @@ export default {
         NProgress.configure({ showSpinner: false });
         this.getAppList();
     }
-}
+};
 </script>
 
 <style lang="sass">

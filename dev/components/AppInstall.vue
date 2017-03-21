@@ -45,9 +45,9 @@
 </template>
 
 <script>
-/* global $ */
-import NProgress from 'nprogress'
-import 'nprogress/nprogress.css'
+/* global $ swal foswiki*/
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
 
 export default {
     props: ['config', 'app', 'depth', 'multisiteEnabled'],
@@ -59,7 +59,7 @@ export default {
            localConfig: "",
            invalidJson: false,
            errorMessage: ""
-       }
+       };
     },
     computed: {
         nextDepth: function () {
@@ -89,12 +89,12 @@ export default {
             this.edit = false;
         },
         install: function(config) {
-            var self = this;
+            let self = this;
             if( this.request ) {
                 return false;
             }
             NProgress.start();
-            var requestData = {
+            let requestData = {
                     appId: this.app,
                     installConfig: JSON.stringify(config)
             };
@@ -113,7 +113,7 @@ export default {
                 self.request = null;
                 self.$parent.loadDetails();
             })
-            .fail( function(xhr, status, error) {
+            .fail( function() {
                 NProgress.done();
                 self.request = null;
             });
@@ -143,14 +143,14 @@ export default {
         this.configJson = JSON.stringify(this.config, null, '    ');
         this.localConfig = $.extend({}, this.config);
         this.ready = true;
-        this.$watch("config", function(newVal, oldVal) {
+        this.$watch("config", function() {
             this.abort();
         });
     },
     beforeCreate: function() {
         this.$options.components.AppInstall = require('./AppInstall.vue');
     }
-}
+};
 </script>
 
 <style lang="sass">

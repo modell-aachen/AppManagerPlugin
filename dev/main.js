@@ -1,5 +1,5 @@
 /* global $ Vue */
-import AppList from './components/AppList.vue'
+import AppList from './components/AppList.vue';
 
 $( function () {
     new Vue({
@@ -7,5 +7,5 @@ $( function () {
         components: {
             appList: AppList
         }
-    })
-})
+    });
+});
