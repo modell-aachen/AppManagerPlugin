@@ -121,6 +121,10 @@ sub _applist {
     for my $appConfigPath (@configs) {
         my $appConfig = _getJSONConfig($appConfigPath);
         if ($appConfig) {
+            # Do not list the multisite install as it is handled separately
+            if($appConfig->{appname} eq 'MultisiteAppContrib'){
+                next;
+            }
             push(@$appList, {
                 id => $appConfigPath,
                 name => $appConfig->{appname}
@@ -193,23 +197,172 @@ sub _enableMultisite {
     }
 
     # Set SitePreferences
-    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
-    $mainText =~ s/(\*\sSet\sMODAC_HIDEWEBS\s*=\s*.*)\n/$1|Settings|OUTemplate\n/;
-
-    $mainText =~ s/(\*\sSet\sSKIN\s*=\s*custom,)(.*)\n/$1multisite,$2\n/;
-
-    Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
+    _setOnPreferences({}, [
+        {
+            name => 'MODAC_HIDEWEBS',
+            pattern => qr($),
+            format => '|Settings|OUTemplate',
+            skip => '\|Settings\|OUTemplate\b',
+        },
+        {
+            name => 'SKIN',
+            pattern => qr((\bcustom\s*,|^(?!\bcustom\s*,))), # matches 'custom,' if it exists, start anchor otherwise
+            format => '$1multisite,',
+            skip => '\bmultisite\b',
+        }
+    ]);
 
     # Copy MultisiteWebLeftBar
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
     my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic($systemWebName,"MultisiteWebLeftBarDefault");
     Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText);
 
+
+    # Install the MultisiteAppContrib
+    my $appConfig = _getJSONConfig(_getRootDir().'/lib/Foswiki/Contrib/MultisiteAppContrib/appconfig_new.json');
+    my $appName = $appConfig->{appname};
+    _install($appName, $appConfig->{installConfigs}[0]);
+
     return {
         success => JSON::true,
         message => "Multisite enabled."
     };
+}
+
+# Parameters:
+#    * settings: See SetOnPreferencesText
+sub _setOnPreferences {
+    my ($config, $settings, $altSection, $webtopic) = @_;
+
+    my ($web, $topic, $meta, $text);
+    unless (ref $webtopic) {
+        $webtopic ||= $Foswiki::cfg{'LocalSitePreferences'};
+        ($web, $topic) = Foswiki::Func::normalizeWebTopicName('', $webtopic);
+        ($meta, $text) = Foswiki::Func::readTopic($web, $topic);
+    } else {
+        $meta = $webtopic;
+        $web = $meta->web();
+        $topic = $meta->topic();
+        $text = $meta->text();
+    }
+
+    $text = _setOnPreferencesText($config, $settings, $text, $altSection);
+
+    Foswiki::Func::saveTopic($web, $topic, $meta, $text);
+}
+
+# Parameters:
+#    * settings: array of settings to set, each item being a hash with options
+#      as described in the plugin doku
+#       * skip: when old value matches this regex, keep old value
+#    * text: the text of a preferences topic
+#    * altHeadnings: default for settings.altHeadings; defaults itself to
+#      ['Modell Aachen Settings', 'Project Settings']
+#
+# Returns:
+#    * modified text
+sub _setOnPreferencesText {
+    my ($config, $settings, $text, $altHeadings) = @_;
+
+    $altHeadings = ['Modell Aachen Settings', 'Project Settings'] unless $altHeadings && (not ref $altHeadings || scalar @$altHeadings);
+
+    # will replace &{settingname} with the actual config->{settingname} value
+    # will not replace \${...}
+    my $_settify = sub {
+        my ($text) = @_;
+        $text =~ s#(?<!\\)\&\{([^}]*)\}#defined $config->{$1} ? $config->{$1} : ''#ge;
+
+        return $text;
+    };
+
+    # returns a "   * Set NAME = Value" string
+    # Parameters:
+    #    * setString: first part of the setting "   * Set NAME = "
+    #    * oldValue: the current value; used as fallback
+    #    * vSettings: settings for the value
+    my $_getSetString = sub {
+        my ($setString, $oldValue, $vSettings) = @_;
+
+        return '' if $vSettings->{remove};
+
+        my $value = $oldValue;
+
+        my $doSkip;
+        if(defined $vSettings->{skip}) {
+            my $skip = $vSettings->{skip};
+            $skip = &$_settify($skip);
+
+            $doSkip = 1 if $value =~ m#$skip#;
+        }
+
+        unless ($doSkip) {
+            if(defined $vSettings->{pattern}) {
+                my $format = $vSettings->{format};
+                $format = '' unless defined $format;
+                $format = '"'.$format.'"'; # prepare for the ee flag
+
+                my $pattern = $vSettings->{pattern};
+                $pattern = &$_settify($pattern);
+
+                unless ($value =~ s/$pattern/$format/ee) {
+                    $value = $vSettings->{value} if defined $vSettings->{value};
+                }
+            } elsif(defined $vSettings->{value}) {
+                $value = $vSettings->{value};
+            }
+
+            $value = &$_settify($value);
+        }
+
+        return "$setString$value";
+    };
+
+    foreach my $setting (@$settings) {
+        my $name = $setting->{name};
+        unless ($name) {
+            # XXX this warning is not ideal, since it does not tell which app
+            # or configuration is faulty
+            Foswiki::Func::writeWarning("Invalid setting had no name");
+            next;
+        }
+
+        # try find/replace an old value first
+        # note: not using $Foswiki::regex{setRegex}, because it also matches
+        # 'Local'
+        unless($text =~ s/($Foswiki::regex{bulletRegex}\h+Set\h+\Q$name\E\h*=\h*)(.*)/&$_getSetString($1, $2, $setting)/me) {
+            # Ok, we did not find an old value
+
+            # Do we want a value?
+            next if $setting->{remove};
+
+            # Do nothing if we have no fallback
+            unless (defined $setting->{value}) {
+                Foswiki::Func::writeWarning("Invalid setting had no value or pattern") unless defined $setting->{pattern};
+                next;
+            }
+
+            # let's insert after the marker
+            my $heading;
+            my $headings = $setting->{altHeadings};
+            $headings = $altHeadings unless defined $headings && ((not ref $headings) || scalar @$headings);
+            $headings = [$headings] unless ref $headings;
+            foreach my $h (@$headings) {
+                next unless ($text =~ m/^---\++\h*\Q$h\E\s*$/m);
+                $heading = $h;
+                last;
+            }
+            unless ($heading) {
+                # this should normally not happen, thus an ugly fallback should be
+                # sufficient
+                $heading = $headings->[0];
+                $text = "---++ $heading\n\n$text";
+            }
+            my $value = &$_settify($setting->{value});
+            $text =~ s/(^---\++\h*\Q$heading\E\s*\n)/$1   * Set $setting->{name} = $value\n/m;
+        }
+    }
+
+    return $text;
 }
 
 sub _disableMultisite {
@@ -220,17 +373,28 @@ sub _disableMultisite {
             message => "Multisite is already disabled."
         };
     }
+
+    #Uninstall the Settings and OUTemplate webs
+    _uninstall('MultisiteAppContrib', 'Settings');
+    _uninstall('MultisiteAppContrib', 'OUTemplate');
+
     # Remove SitePreferences
-    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
-    $mainText =~ s/\|Settings\|OUTemplate//;
-
-    $mainText =~ s/custom,multisite,/custom,/;
-
-    Foswiki::Func::saveTopic($sitePrefWeb, $sitePrefTopic, $mainMeta, $mainText);
+    _setOnPreferences({}, [
+        {
+            name => 'MODAC_HIDEWEBS',
+            format => '',
+            pattern => qr(\|Settings\|OUTemplate),
+        },
+        {
+            name => 'SKIN',
+            format => '',
+            pattern => qr(multisite,),
+        },
+    ]);
 
     my $customWeb = Foswiki::Func::getPreferencesValue('CUSTOMIZINGWEB') || 'Custom';
 
+    # Remove multisite WebLeftBarDefault
     Foswiki::Func::moveTopic($customWeb,"WebLeftBarDefault",$Foswiki::cfg{TrashWebName}."/$customWeb","WebLeftBarDefault".time());
 
     return {
@@ -289,17 +453,16 @@ sub _install {
         # Create WebPreferences
         my ($preferencesMeta, $defaultWebText) = Foswiki::Func::readTopic($systemWebName, "AppManagerDefaultWebPreferences");
         $defaultWebText =~ s/<DEFAULT_SOURCES_PREFERENCE>/$appName/;
+        my $additionalWebPreferences = "";
         if($subConfig->{webPreferences}){
-            # Add additional defined preferences
-            foreach my $pref (@{$subConfig->{webPreferences}}){
-                $preferencesMeta->putKeyed('PREFERENCE', {
-                    name => $pref->{name},
-                    title => $pref->{name},
-                    value => $pref->{value}
-                });
-            }
+            $defaultWebText = _setOnPreferencesText($subConfig, $subConfig->{webPreferences}, $defaultWebText);
         }
         Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
+
+        # Modify SitePreferences
+        if($subConfig->{sitePreferences} && $subConfig->{destinationWeb} !~ m/^_/) {
+            _setOnPreferences($subConfig, $subConfig->{sitePreferences});
+        }
 
         if($subConfig->{formConfigs}){
             _printDebug("Installing forms...\n");
@@ -337,7 +500,9 @@ sub _install {
                         value => ''
                     }
                 );
-                Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                _vAction(sub{
+                    Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                });
                 _printDebug("Created FormManager: $topic\n");
             }
         }
@@ -390,7 +555,9 @@ sub _install {
                 }
                 ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic($systemWebName,$templateName);
             }
-            Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
+            _vAction(sub{
+                Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
+            });
         }
         else{
             _printDebug("No WebHome config provided. Skipping auto generation of WebHome!\n");
@@ -398,27 +565,25 @@ sub _install {
         my $webActionsConfig = $subConfig->{webActionsConfig};
         if($webActionsConfig){
             _printDebug("Creating WebActions...\n");
-            Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
+            _vAction(sub{
+                Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
+            });
         }
         else{
             _printDebug("No WebActions config provided. Skipping auto generation of WebActions!\n");
         }
 
-        _printDebug("Creating WebTopicList...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebTopicList", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
         _printDebug("Creating WebStatistics...\n");
         my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic($systemWebName,"AppManagerDefaultWebStatisticsTemplate");
         Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
 
-        _printDebug("Creating WebChanges...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebChanges", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
-        _printDebug("Creating WebSearch...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebSearch", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
-
-        _printDebug("Creating WebSearchAdvanced...\n");
-        Foswiki::Func::saveTopic($destinationWeb, "WebSearchAdvanced", undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+        # Note: All these could already be virtual topics
+        foreach my $systemTopic ( qw(WebChanges WebSearch WebSearchAdvanced WebTopicList) ) {
+            unless(Foswiki::Func::topicExists($destinationWeb, $systemTopic)) {
+                _printDebug("Creating $systemTopic...\n");
+                Foswiki::Func::saveTopic($destinationWeb, $systemTopic, undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+            }
+        }
 
         if($subConfig->{groups}){
             _printDebug("Processing groups...\n");
@@ -455,6 +620,7 @@ sub _install {
             foreach my $appContent (@$appContentConfig){
                 my $baseDir = $appContent->{baseDir};
                 my $ignoredTopics = $appContent->{ignore} || [];
+                my $alwaysCopyTopics = $appContent->{alwaysCopy};
                 my $linkedTopics = $appContent->{link} || [];
                 my $targetDir;
                 if($appContent->{targetDir}){
@@ -469,13 +635,24 @@ sub _install {
                 if($linkedTopics){
                     push(@$ignoredTopics, @$linkedTopics);
                 }
+                my $alwaysCopyReg;
+                if(defined $alwaysCopyTopics) {
+                    $alwaysCopyReg = join("|", @$alwaysCopyTopics);
+                }
                 _printDebug("Moving content from $baseDir to $targetDir...\n");
                 if($appContent->{includeWebPreferences} && $appContent->{includeWebPreferences} eq JSON::true){
                     my ($webPrefMeta, $webPrefText) = Foswiki::Func::readTopic($baseDir, "WebPreferences");
                     Foswiki::Func::saveTopic($targetDir, "WebPreferences", $webPrefMeta, $webPrefText);
                 }
                 eval {
-                    Foswiki::Plugins::FillWebsPlugin::_fill($baseDir, 0, $targetDir, 0, "", join("|", @$ignoredTopics), 1, 10);
+                    Foswiki::Plugins::FillWebsPlugin::fill({
+                        srcWeb => $baseDir,
+                        recurseSrc => 0,
+                        targetWeb => $targetDir,
+                        recurseTarget => 0,
+                        skipTopics => join("|", @$ignoredTopics),
+                        unskipTopics => $alwaysCopyReg
+                    });
                 };
                 if($@){
                     use Data::Dumper;
@@ -492,6 +669,7 @@ sub _install {
                 # Create symlinks
                 if($linkedTopics){
                     foreach my $topic (@$linkedTopics){
+                        next if $alwaysCopyReg && $topic =~ m#$alwaysCopyReg#;
                         my $srcTopic = _getRootDir()."/data/".$baseDir."/".$topic.".txt";
                         my $destTopic = _getRootDir()."/data/".$targetDir."/".$topic.".txt";
                         symlink $srcTopic, $destTopic;
@@ -518,6 +696,15 @@ sub _install {
     };
 }
 
+sub _vAction {
+    if($Foswiki::Plugins::SESSION->{store}->can('doWithoutVirtualTopics')) {
+        $Foswiki::Plugins::SESSION->{store}->doWithoutVirtualTopics(@_);
+    } else {
+        my $sub = shift;
+        &$sub(@_);
+    }
+}
+
 sub _uninstall {
     my ($appName,$web) = @_;
     # Move web to trash
@@ -532,7 +719,7 @@ sub _uninstall {
 
     # Remove from history
     my $history = _readHistory($appName);
-    my %installed = %{$history->{installed}};
+    my %installed = %{$history->{installed} || {}};
     delete $installed{$web};
     $history->{installed} = \%installed;
     _writeHistory($appName, $history);

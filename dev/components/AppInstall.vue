@@ -8,8 +8,13 @@
         </div>
         <div  class="small-6 columns right">
             <template v-if="!edit">
-                <button class="button primary" v-on:click="install(config)">Install</button>
-                <button v-if="!hasSubConfigs(config)" class="button" v-on:click="editInstall" title="Click to customize this configuration">Edit</button>
+                <template v-if="isInstallAllowed">
+                    <button class="button primary" v-on:click="install(config)" >Install</button>
+                    <button v-if="!hasSubConfigs(config)" class="button" v-on:click="editInstall" title="Click to customize this configuration">Edit</button>
+                </template>
+                <template v-else>
+                    <p v-if="!isInstallAllowed">Enable multisite to perform this installation.</p>
+                </template>
             </template>
             <template v-else>
                 Installname
@@ -32,8 +37,8 @@
         </div>
     </div>
     <hr></hr>
-    <template v-if="hasSubConfigs(config)" v-for="subConfig in config.subConfigs">
-        <app-install :config="subConfig" :app="app" :depth="nextDepth"></app-install>
+    <template v-if="hasSubConfigs(config) && isInstallAllowed" v-for="subConfig in config.subConfigs">
+        <app-install :config="subConfig" :app="app" :depth="nextDepth" :multisite-enabled="multisiteEnabled"></app-install>
         <hr></hr>
     </template>
     </div>
@@ -45,7 +50,7 @@ import 'nprogress/nprogress.css'
 import $ from 'jquery'
 
 export default {
-    props: ['config', 'app', 'depth'],
+    props: ['config', 'app', 'depth', 'multisiteEnabled'],
     data: function () {
        return {
            edit: false,
@@ -70,6 +75,9 @@ export default {
                     this.configJson = JSON.stringify(this.localConfig, null, '    ');
                 }
             }
+        },
+        isInstallAllowed: function(){
+            return (this.config.name !== "Multisite" || this.multisiteEnabled);
         }
     },
     methods: {

@@ -8,6 +8,8 @@
 
 ---++ Project Settings
 
+---++ Technical settings - do not change
+
    * Set DEFAULT_SOURCES = <DEFAULT_SOURCES_PREFERENCE>
       * See <a href="#defaultPrefs">Default Preferences</a>
 
