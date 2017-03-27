@@ -19,11 +19,11 @@
 </template>
 
 <script>
-import NProgress from 'nprogress'
-import 'nprogress/nprogress.css'
-import $ from 'jquery'
-import AppInstall from './AppInstall.vue'
-import AppInstalled from './AppInstalled.vue'
+/* global $ swal foswiki */
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
+import AppInstall from './AppInstall.vue';
+import AppInstalled from './AppInstalled.vue';
 
 export default {
     props: ['app','multisiteEnabled'],
@@ -36,38 +36,39 @@ export default {
            appConfig: '',
            installed: [],
            ready: false
-       }
+       };
     },
     methods: {
         loadDetails: function() {
-            var self = this;
+            let self = this;
             NProgress.start();
             $.get(foswiki.preferences.SCRIPTURL + "/rest/AppManagerPlugin/appdetail?name=" + this.app)
             .done( function(result) {
+                let infos;
                 try{
-                    var infos = JSON.parse(result);
+                    infos = JSON.parse(result);
                 }catch(e){
                     swal("App JSON invalid!", String(e), "error");
                     NProgress.done();
-                    return
+                    return;
                 }
                 self.appConfig = infos.appConfig;
                 self.installed = infos.installed;
                 self.ready = true;
                 NProgress.done();
             })
-            .fail( function(xhr, status, error) {
+            .fail( function() {
                 NProgress.done();
             });
         }
     },
     created: function() {
         this.loadDetails();
-        this.$watch("app", function(newVal, oldVal) {
+        this.$watch("app", function() {
             this.loadDetails();
         });
     }
-}
+};
 </script>
 
 <style lang="sass">

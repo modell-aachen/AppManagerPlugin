@@ -1,6 +1,6 @@
 %META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
 %META:TOPICPARENT{name="Plugins"}%
-
+%VUE{VERSION="2"}%
 %JQREQUIRE{"blockui,jqp::underscore,wikiword,jqp::sweetalert2"}%
 %ADDTOZONE{
   "head"

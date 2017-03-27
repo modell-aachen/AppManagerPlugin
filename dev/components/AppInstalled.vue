@@ -20,9 +20,9 @@
 </template>
 
 <script>
-import NProgress from 'nprogress'
-import 'nprogress/nprogress.css'
-import $ from 'jquery'
+/* global $ swal foswiki */
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
 
 export default {
     props: ['installed', 'appname'],
@@ -30,11 +30,11 @@ export default {
        return {
            ready: false,
            empty: true
-       }
+       };
     },
     methods: {
         uninstallApp: function (app) {
-            var self = this;
+            let self = this;
             swal({
                 title: "Are you sure?",
                 text: "All topics of " + app + " will be moved to the Trash Web.",
@@ -49,7 +49,7 @@ export default {
             function(isConfirm){
                 if (isConfirm) {
                     NProgress.start();
-                    var requestData = {
+                    let requestData = {
                         appWeb: app,
                         appName: self.appname
                     };
@@ -66,7 +66,7 @@ export default {
                         NProgress.done();
                         self.$parent.loadDetails();
                     })
-                    .fail( function(xhr, status, error) {
+                    .fail( function() {
                         NProgress.done();
                     });
                 }
@@ -79,7 +79,7 @@ export default {
     created: function() {
         this.ready = true;
     }
-}
+};
 </script>
 
 <style lang="sass">

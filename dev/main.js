@@ -1,8 +1,5 @@
-import Vue from 'vue/dist/vue.js'
-import AppList from './components/AppList.vue'
-import $ from 'jquery'
-
-window.Vue = Vue;
+/* global $ Vue */
+import AppList from './components/AppList.vue';
 
 $( function () {
     new Vue({
@@ -10,5 +7,5 @@ $( function () {
         components: {
             appList: AppList
         }
-    })
-})
+    });
+});
