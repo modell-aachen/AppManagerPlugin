@@ -1,0 +1,31 @@
+%META:TOPICINFO{author="BaseUserMapping_333" comment="pending" date="1445591316" format="1.1" version="3"}%
+%META:TOPICPARENT{name="Plugins"}%
+%VUE{VERSION="2"}%
+%JQREQUIRE{"blockui,jqp::underscore,wikiword,jqp::sweetalert2"}%
+%ADDTOZONE{
+  "head"
+  id="FONTAWESOME"
+  text="<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"%PUBURLPATH%/%SYSTEMWEB%/FontAwesomeContrib/css/font-awesome.min.css\" />"
+}%
+%ADDTOZONE{
+  "script"
+  id="APPMANAGERCONTRIB::SCRIPTS"
+  requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
+  text="<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>"
+}%
+%ADDTOZONE{
+  "script"
+  id="FOUNDATION::SCRIPTS"
+  requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
+  text="<script type='text/javascript' src='%PUBURLPATH%/System/FlatSkin/js/foundation.js'></script>"
+}%
+%ADDTOZONE{
+  "head"
+  id="FLATSKIN::STYLES"
+  text="<link rel='stylesheet' href='%PUBURLPATH%/System/FlatSkin/css/flatskin_wrapped.min.css' />"
+}%
+<div class="app-manager">
+   <app-list></app-list>
+</div>
+
+%META:PREFERENCE{name="ALLOWTOPICVIEW" title="ALLOWTOPICVIEW" type="Set" value="AdminUser"}%
