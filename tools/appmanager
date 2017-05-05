@@ -1,0 +1,166 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use Data::Dumper;
+do '../bin/setlib.cfg';
+require Foswiki;
+Foswiki->new('admin');
+
+require Foswiki::Plugins::AppManagerPlugin;
+
+if(@ARGV < 1){
+	printHelp();
+	exit;
+}
+
+my $command = $ARGV[0];
+
+if($command eq 'install'){
+	install();
+	exit;
+}
+elsif($command eq 'list'){
+	list();
+	exit;
+}
+elsif($command eq 'uninstall'){
+	uninstall();
+	exit;
+}
+elsif($command eq 'multisite'){
+	multisite();
+	exit;
+}
+else{
+	print "Unknown command!\n";
+	printHelp();
+	exit;
+}
+
+sub printHelp{
+	print "Usage: appmanager <command> [params...]\n";
+	print "\n";
+	print "Available commands:\n";
+	print "list\n";
+		print "\tPrints a list of all apps that can be installed via AppManager.\n";
+		print "\tIt additionally prints a list of all webs where apps have been installe via AppManager.\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager list\n";
+	print "install\n";
+		print "\tInstalls an app given the app name and the install config name as params.\n";
+		print "\tIf no install config is specified then the first defined install config in the appconfig is used (default install).\n";
+		print "\tIf 'all' is used as install config parameter then all available apps are installed with the default installation.\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager install MinutesAppContrib\n";
+		print "\t\tappmanager install MinutesAppContrib Multisite\n";
+		print "\t\tappmanager install all\n";
+	print "uninstall\n";
+		print "\tUninstalls an app given the app name and the web name of the destination web used for installation.\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager uninstall MinutesAppContrib Minutes\n";
+	print "multisite\n";
+		print "\tUsed to automatically set/reset general settings for multisite Wikis (e.g. SitePreferences).\n";
+		print "\tExamples:\n";
+		print "\t\tappmanager multisite enable\n";
+		print "\t\tappmanager multisite disable\n";
+	return;
+}
+
+sub multisite {
+	my $operation = $ARGV[1];
+
+	if($operation eq "enable"){
+		Foswiki::Plugins::AppManagerPlugin::_enableMultisite();
+		exit;
+	}
+	elsif($operation eq "disable"){
+		Foswiki::Plugins::AppManagerPlugin::_disableMultisite();
+		exit;
+	}
+}
+
+sub install{
+	my $appName = $ARGV[1];
+	my $installName = $ARGV[2];
+
+	unless($appName){
+		print "For installation please specify the app name\n";
+		exit;
+	}
+
+	if($appName eq 'all'){
+		Foswiki::Plugins::AppManagerPlugin::_installAll();
+		exit;
+	}
+
+	my $appList = Foswiki::Plugins::AppManagerPlugin::_applist();
+	my $appToInstall;
+	foreach my $app (@$appList){
+		if($app->{name} eq $appName){
+			$appToInstall = $app;
+		}
+	}
+	if(!$appToInstall){
+		print("No app configuration found for app $appName\n");
+		exit;
+	}
+	my $appDetails = Foswiki::Plugins::AppManagerPlugin::_appdetail($appToInstall->{id});
+	my @installConfigs = @{$appDetails->{appConfig}->{installConfigs}};
+	my $configToUse;
+	if($installName){
+		foreach my $installConfig (@installConfigs){
+			if($installConfig->{name} eq $installName){
+				$configToUse = $installConfig;
+			}
+		}
+	}
+	else {
+		$configToUse = $installConfigs[0];
+	}
+
+	unless($configToUse){
+		print "No install configuration found for $installName\n";
+		exit;
+	}
+
+	my $installResult = Foswiki::Plugins::AppManagerPlugin::_install($appName, $configToUse);
+	if($installResult->{success} eq "false"){
+		print "Installation failed: ";
+		print $installResult->{message}."\n";
+	}
+	else{
+		print "Installation finished\n";
+	}
+	exit;
+}
+
+sub list{
+	my $appList = Foswiki::Plugins::AppManagerPlugin::_applist();
+	print "Apps managed by the AppManager:\n";
+	foreach my $app (@$appList){
+		print "\t".$app->{name}."\n";
+		my $history = Foswiki::Plugins::AppManagerPlugin::_readHistory($app->{name});
+		if($history->{installed} && ref($history->{installed}) eq "HASH" && %{$history->{installed}}){
+			print "\t\tInstalled in: ";
+			print join(",",keys(%{$history->{installed}}))."\n";
+		}
+		else{
+			print "\t\tNot installed\n";
+		}
+	}
+	exit;
+}
+
+sub uninstall{
+	my $appName = $ARGV[1];
+	my $webName = $ARGV[2];
+
+	unless($appName && $webName) {
+		print "For uninstallation please specify the app name and the web name\n";
+		exit;
+	}
+
+	Foswiki::Plugins::AppManagerPlugin::_uninstall($appName, $webName);
+	exit;
+}
