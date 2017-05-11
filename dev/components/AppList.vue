@@ -104,7 +104,12 @@ export default {
                 window.console && console.log(request);
                 window.console && console.log(settings);
                 window.console && console.log(thrownError);
-                swal("Request failed!", thrownError, "error");
+                swal({
+                    title: "Request failed!",
+                    text: request.responseText,
+                    html: true,
+                    type: "error"
+                });
         });
         NProgress.configure({ showSpinner: false });
         this.getAppList();
