@@ -119,6 +119,7 @@ export default {
                     swal("Installation Completed!",
                     message,
                     "success");
+                    $.get(foswiki.getScriptUrl("rest","FormGeneratorPlugin", "index"), {mode: "nosolr"});
                 } else {
                     swal("Installation Failed!", result.message, "error");
                 }
