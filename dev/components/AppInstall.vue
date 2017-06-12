@@ -114,7 +114,7 @@ export default {
                             }
                          }
                      }else{
-                            message += config.destinationWeb + ".\n";
+                            message += config.destinationWeb + ".";
                      }
                     swal("Installation Completed!",
                     message,
