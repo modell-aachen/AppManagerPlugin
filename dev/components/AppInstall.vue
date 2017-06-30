@@ -103,9 +103,23 @@ export default {
             .done( function(result) {
                 result = JSON.parse(result);
                 if(result.success) {
+                    let message = "App installed as ";
+                    if(config.subConfigs) {
+                         for (let i = 0; i < config.subConfigs.length; i++) {
+                            message += config.subConfigs[i].destinationWeb;
+                            if(i != config.subConfigs.length - 1){
+                                message += " and ";
+                            } else {
+                                message += ".";
+                            }
+                         }
+                     }else{
+                            message += config.destinationWeb + ".";
+                     }
                     swal("Installation Completed!",
-                    "App installed as " + config.destinationWeb + ".",
+                    message,
                     "success");
+                    $.get(foswiki.getScriptUrl("rest","FormGeneratorPlugin", "index"), {mode: "nosolr"});
                 } else {
                     swal("Installation Failed!", result.message, "error");
                 }
