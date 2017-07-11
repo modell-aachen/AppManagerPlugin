@@ -770,10 +770,11 @@ sub _RESTappdetail {
     }
 
     $response->header(-status => !$app ? 400 : 200);
-    return encode_json(
+    $response->body(encode_json(
         !$app
             ? _texterror('Parameter \'name\' is mandatory')
-            : _appdetail($app));
+            : _appdetail($app)));
+    return '';
 }
 
 # Returns list of managed and unmanaged applications.
