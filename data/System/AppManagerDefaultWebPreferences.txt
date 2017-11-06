@@ -20,7 +20,7 @@ Remember that an empty setting is a valid setting; setting DENYWEBVIEW to nothin
 
    * Set DENYWEBVIEW = WikiGuest
    * Set ALLOWWEBVIEW =
-   * Set DENYWEBCHANGE = WikiGuest
+   * Set DENYWEBCHANGE = WikiGuest, ReadOnlyGroup
    * Set ALLOWWEBCHANGE =
    * Set DENYWEBRENAME = WikiGuest
    * Set ALLOWWEBRENAME =
