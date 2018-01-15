@@ -501,7 +501,11 @@ sub _install {
                     }
                 );
                 _vAction(sub{
-                    Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                    if ( UNIVERSAL::isa( $Foswiki::engine, 'Foswiki::Engine::CLI' ) ) {
+                        Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "", { nohandlers => 1 });
+                    } else {
+                        Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                    }
                 });
                 _printDebug("Created FormManager: $topic\n");
             }
