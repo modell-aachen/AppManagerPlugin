@@ -776,10 +776,11 @@ sub _RESTappdetail {
     }
 
     $response->header(-status => !$app ? 400 : 200);
-    return encode_json(
+    $response->body(encode_json(
         !$app
             ? _texterror('Parameter \'name\' is mandatory')
-            : _appdetail($app));
+            : _appdetail($app)));
+    return '';
 }
 
 # Returns list of managed and unmanaged applications.
@@ -790,16 +791,18 @@ sub _RESTapplist {
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
         $response->header(-status => 403);
-        return encode_json(_texterror('Only Admins are allowed to list installed applications.'));
+        $response->body(encode_json(_texterror('Only Admins are allowed to list installed applications.')));
+        return '';
     }
     my $isMultisite = _isMultisiteEnabled();
-    return encode_json({
+    $response->body(encode_json({
         "apps" => _applist(),
         "multisite" => {
             "enabled" => _isMultisiteEnabled() ? JSON::true : JSON::false,
             "available" => _isMultisiteAvailable() ? JSON::true : JSON::false
         }
-    });
+    }));
+    return '';
 }
 
 # RestHandler to execute action for app
@@ -814,21 +817,25 @@ sub _RESTappaction {
     # This page is only visible for the admin user
     if (!Foswiki::Func::isAnAdmin()) {
         $response->header(-status => 403);
-        return encode_json(_texterror('Only Admins are allowed to execute actions.'));
+        $response->body(encode_json(_texterror('Only Admins are allowed to execute actions.')));
+        return '';
     }
     unless ($appId)   {
         $response->header(-status => 400);
-        return encode_json(_texterror('Parameter \'appId\' is mandatory'));
+        $response->body(encode_json(_texterror('Parameter \'appId\' is mandatory')));
+        return '';
     }
     unless ($installConfig) {
         $response->header(-status => 400);
-        return encode_json(_texterror('Parameter \'installConfig\' is mandatory'));
+        $response->body(encode_json(_texterror('Parameter \'installConfig\' is mandatory')));
+        return '';
     }
 
     my $appConfig = _getJSONConfig($appId);
     my $appName = $appConfig->{appname};
     my $result = _install($appName, decode_json($installConfig));
-    return encode_json($result);
+    $response->body(encode_json($result));
+    return '';
 }
 
 sub _RESTappuninstall {
@@ -840,12 +847,14 @@ sub _RESTappuninstall {
 
     if (!Foswiki::Func::isAnAdmin()) {
         $response->header(-status => 403);
-        return encode_json(_texterror('Only Admins are allowed to use this.'));
+        $response->body(encode_json(_texterror('Only Admins are allowed to use this.')));
+        return '';
     }
 
     _uninstall($appName, $appWeb);
 
-    return encode_json({"status" => "ok"});
+    $response->body(encode_json({"status" => "ok"}));
+    return '';
 }
 
 sub _RESTmultisite {
@@ -856,7 +865,8 @@ sub _RESTmultisite {
 
     if (!Foswiki::Func::isAnAdmin()) {
         $response->header(-status => 403);
-        return encode_json(_texterror('Only Admins are allowed to use this.'));
+        $response->body(encode_json(_texterror('Only Admins are allowed to use this.')));
+        return '';
     }
 
     my $result;
@@ -868,7 +878,8 @@ sub _RESTmultisite {
         $result = _disableMultisite();
     }
 
-    return encode_json($result);
+    $response->body(encode_json($result));
+    return '';
 }
 
 1;
