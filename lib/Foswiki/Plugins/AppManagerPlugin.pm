@@ -25,6 +25,12 @@ our $RELEASE = '0.3';
 our $SHORTDESCRIPTION  = 'Modell Aachen application installer';
 our $NO_PREFS_IN_TOPIC = 1;
 
+our %save_options;
+if ( UNIVERSAL::isa( $Foswiki::engine, 'Foswiki::Engine::CLI' ) ) {
+    %save_options = ( nohandlers => 1 );
+} else {
+    %save_options = ( nohandlers => 0 );
+}
 sub initPlugin {
     my ($topic, $web, $user, $installWeb) = @_;
 
@@ -215,7 +221,7 @@ sub _enableMultisite {
     # Copy MultisiteWebLeftBar
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
     my ($leftBarMeta,$leftBarText) = Foswiki::Func::readTopic($systemWebName,"MultisiteWebLeftBarDefault");
-    Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText);
+    Foswiki::Func::saveTopic($customWeb, "WebLeftBarDefault", $leftBarMeta, $leftBarText, \%save_options);
 
 
     # Install the MultisiteAppContrib
@@ -248,7 +254,7 @@ sub _setOnPreferences {
 
     $text = _setOnPreferencesText($config, $settings, $text, $altSection);
 
-    Foswiki::Func::saveTopic($web, $topic, $meta, $text);
+    Foswiki::Func::saveTopic($web, $topic, $meta, $text, \%save_options);
 }
 
 # Parameters:
@@ -457,7 +463,7 @@ sub _install {
         if($subConfig->{webPreferences}){
             $defaultWebText = _setOnPreferencesText($subConfig, $subConfig->{webPreferences}, $defaultWebText);
         }
-        Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText);
+        Foswiki::Func::saveTopic($destinationWeb, "WebPreferences", $preferencesMeta, $defaultWebText, \%save_options);
 
         # Modify SitePreferences
         if($subConfig->{sitePreferences} && $subConfig->{destinationWeb} !~ m/^_/) {
@@ -501,7 +507,7 @@ sub _install {
                     }
                 );
                 _vAction(sub{
-                    Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "");
+                    Foswiki::Func::saveTopic($destinationWeb, $topic, $meta, "", \%save_options);
                 });
                 _printDebug("Created FormManager: $topic\n");
             }
@@ -556,7 +562,7 @@ sub _install {
                 ($webHomeMeta,$webHomeText) = Foswiki::Func::readTopic($systemWebName,$templateName);
             }
             _vAction(sub{
-                Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText);
+                Foswiki::Func::saveTopic($destinationWeb, "WebHome", $webHomeMeta, $webHomeText, \%save_options);
             });
         }
         else{
@@ -566,7 +572,7 @@ sub _install {
         if($webActionsConfig){
             _printDebug("Creating WebActions...\n");
             _vAction(sub{
-                Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%');
+                Foswiki::Func::saveTopic($destinationWeb, "WebActions", undef, '%INCLUDE{"%SYSTEMWEB%.'.$webActionsConfig->{sourceTopic}.'"}%', \%save_options);
             });
         }
         else{
@@ -575,13 +581,13 @@ sub _install {
 
         _printDebug("Creating WebStatistics...\n");
         my ($webStatisticsMeta, $webStatisticsText) = Foswiki::Func::readTopic($systemWebName,"AppManagerDefaultWebStatisticsTemplate");
-        Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText);
+        Foswiki::Func::saveTopic($destinationWeb, 'WebStatistics', $webStatisticsMeta, $webStatisticsText, \%save_options);
 
         # Note: All these could already be virtual topics
         foreach my $systemTopic ( qw(WebChanges WebSearch WebSearchAdvanced WebTopicList) ) {
             unless(Foswiki::Func::topicExists($destinationWeb, $systemTopic)) {
                 _printDebug("Creating $systemTopic...\n");
-                Foswiki::Func::saveTopic($destinationWeb, $systemTopic, undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%');
+                Foswiki::Func::saveTopic($destinationWeb, $systemTopic, undef, '%INCLUDE{"%SYSTEMWEB%.%TOPIC%"}%', \%save_options);
             }
         }
 
@@ -642,7 +648,7 @@ sub _install {
                 _printDebug("Moving content from $baseDir to $targetDir...\n");
                 if($appContent->{includeWebPreferences} && $appContent->{includeWebPreferences} eq JSON::true){
                     my ($webPrefMeta, $webPrefText) = Foswiki::Func::readTopic($baseDir, "WebPreferences");
-                    Foswiki::Func::saveTopic($targetDir, "WebPreferences", $webPrefMeta, $webPrefText);
+                    Foswiki::Func::saveTopic($targetDir, "WebPreferences", $webPrefMeta, $webPrefText, \%save_options);
                 }
                 eval {
                     Foswiki::Plugins::FillWebsPlugin::fill({
