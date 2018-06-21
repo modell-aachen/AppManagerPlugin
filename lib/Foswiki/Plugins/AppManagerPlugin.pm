@@ -16,6 +16,7 @@ require File::Spec;
 require File::Copy;
 require File::Copy::Recursive;
 require Digest::SHA;
+use Digest::MD5 qw(md5_hex);
 
 # Extra modules
 use JSON;
@@ -39,6 +40,9 @@ sub initPlugin {
         Foswiki::Func::writeWarning('Version mismatch between ' . __PACKAGE__ . ' and Plugins.pm');
         return 0;
     }
+
+    Foswiki::Func::registerTagHandler(
+        'APPMANAGER', \&_APPMANAGER );
 
     my %restopts = (authenticate => 1, validate => 0, http_allow => 'POST,GET');
     Foswiki::Func::registerRESTHandler('appaction', \&_RESTappaction, %restopts);
@@ -880,6 +884,22 @@ sub _RESTmultisite {
 
     $response->body(encode_json($result));
     return '';
+}
+
+sub _APPMANAGER {
+   my ( $session, $attributes, $topic, $web, $meta ) = @_;
+
+    Foswiki::Func::addToZone( 'script', 'APPMANAGERCONTRIB::SCRIPTS',
+        "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>","VUEJSPLUGIN,JQUERYPLUGIN"
+    );
+
+    my $clientId = "AppManager_" . substr(md5_hex(rand), -6);
+    my $clientToken = Foswiki::Plugins::VueJSPlugin::registerClient( $clientId );
+    return sprintf(
+        '<div class="AppManagerContainer" data-vue-client-id="%s" data-vue-client-token="%s"><app-list></app-list></div>',
+        $clientId,
+        $clientToken
+    );
 }
 
 1;
