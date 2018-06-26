@@ -890,11 +890,11 @@ sub _APPMANAGER {
     my ( $session, $attributes, $topic, $web, $meta ) = @_;
 
     Foswiki::Func::addToZone( 'script', 'APPMANAGERCONTRIB::SCRIPTS',
-        "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>?v=$RELEASE","VUEJSPLUGIN,JQUERYPLUGIN"
+        "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js?v=$RELEASE'></script>","VUEJSPLUGIN,JQUERYPLUGIN"
     );
 
-    my $clientToken = Foswiki::Plugins::VueJSPlugin::registerClient( $clientId );
-    return <<HTML
+    my $clientToken = Foswiki::Plugins::VueJSPlugin::getClientToken();
+    return <<HTML;
         <div class="AppManagerContainer" data-vue-client-token="$clientToken"><app-list></app-list></div>
 HTML
 }
