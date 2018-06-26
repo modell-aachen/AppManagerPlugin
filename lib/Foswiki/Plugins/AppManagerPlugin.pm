@@ -887,19 +887,16 @@ sub _RESTmultisite {
 }
 
 sub _APPMANAGER {
-   my ( $session, $attributes, $topic, $web, $meta ) = @_;
+    my ( $session, $attributes, $topic, $web, $meta ) = @_;
 
     Foswiki::Func::addToZone( 'script', 'APPMANAGERCONTRIB::SCRIPTS',
-        "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>","VUEJSPLUGIN,JQUERYPLUGIN"
+        "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js'></script>?v=$RELEASE","VUEJSPLUGIN,JQUERYPLUGIN"
     );
 
-    my $clientId = "AppManager_" . substr(md5_hex(rand), -6);
     my $clientToken = Foswiki::Plugins::VueJSPlugin::registerClient( $clientId );
-    return sprintf(
-        '<div class="AppManagerContainer" data-vue-client-id="%s" data-vue-client-token="%s"><app-list></app-list></div>',
-        $clientId,
-        $clientToken
-    );
+    return <<HTML
+        <div class="AppManagerContainer" data-vue-client-token="$clientToken"><app-list></app-list></div>
+HTML
 }
 
 1;
