@@ -16,7 +16,6 @@ require File::Spec;
 require File::Copy;
 require File::Copy::Recursive;
 require Digest::SHA;
-use Digest::MD5 qw(md5_hex);
 
 # Extra modules
 use JSON;
