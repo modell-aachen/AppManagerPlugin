@@ -40,6 +40,9 @@ sub initPlugin {
         return 0;
     }
 
+    Foswiki::Func::registerTagHandler(
+        'APPMANAGER', \&_APPMANAGER );
+
     my %restopts = (authenticate => 1, validate => 0, http_allow => 'POST,GET');
     Foswiki::Func::registerRESTHandler('appaction', \&_RESTappaction, %restopts);
     Foswiki::Func::registerRESTHandler('appuninstall', \&_RESTappuninstall, %restopts);
@@ -880,6 +883,19 @@ sub _RESTmultisite {
 
     $response->body(encode_json($result));
     return '';
+}
+
+sub _APPMANAGER {
+    my ( $session, $attributes, $topic, $web, $meta ) = @_;
+
+    Foswiki::Func::addToZone( 'script', 'APPMANAGERCONTRIB::SCRIPTS',
+        "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js?v=$RELEASE'></script>","VUEJSPLUGIN,JQUERYPLUGIN"
+    );
+
+    my $clientToken = Foswiki::Plugins::VueJSPlugin::getClientToken();
+    return <<HTML;
+        <div class="AppManagerContainer" data-vue-client-token="$clientToken"><app-list></app-list></div>
+HTML
 }
 
 1;

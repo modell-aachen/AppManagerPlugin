@@ -2,10 +2,8 @@
 import AppList from './components/AppList.vue';
 
 $( function () {
-    new Vue({
-        el: '.app-manager',
-        components: {
-            appList: AppList
-        }
-    });
+    Vue.instantiateEach(
+        '.AppManagerContainer',
+         { components: { appList: AppList } }
+    );
 });
