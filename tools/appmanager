@@ -3,11 +3,14 @@ use strict;
 use warnings;
 
 use Data::Dumper;
+use Try::Tiny;
+use Scalar::Util qw( blessed );
 do '../bin/setlib.cfg';
 require Foswiki;
 Foswiki->new('admin');
 
 require Foswiki::Plugins::AppManagerPlugin;
+require Foswiki::Plugins::AppManagerPlugin::AppConfigCreator;
 
 if(@ARGV < 1){
 	printHelp();
@@ -31,6 +34,9 @@ elsif($command eq 'uninstall'){
 elsif($command eq 'multisite'){
 	multisite();
 	exit;
+}
+elsif($command eq 'create') {
+    create($ARGV[1]);
 }
 else{
 	print "Unknown command!\n";
@@ -65,6 +71,21 @@ sub printHelp{
 		print "\t\tappmanager multisite enable\n";
 		print "\t\tappmanager multisite disable\n";
 	return;
+}
+
+sub create {
+    my ( $jsonConfig ) = @_;
+    try {
+        my $creator = Foswiki::Plugins::AppManagerPlugin::AppConfigCreator->new($jsonConfig);
+        $creator->run();
+    } catch {
+        if ((blessed $_) && $_->isa('Foswiki::Plugins::AppManagerPlugin::AppManagerException')) {
+            print "Error when trying to create AppContrib: '$_->{message}'\n";
+        } else {
+            die $_;
+        }
+    };
+    exit;
 }
 
 sub multisite {
