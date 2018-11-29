@@ -425,6 +425,8 @@ sub _isMultisiteEnabled {
 
 sub _install {
     my ($appName, $installConfig) = @_;
+    my $failedToAddUser = 0;
+    my $addUsersToProvider = $Foswiki::cfg{'UnifiedAuth'}{'AddUsersToProvider'};
 
     _printDebug("Starting installation for $appName...\n");
 
@@ -613,7 +615,18 @@ sub _install {
                 }
 
                 foreach my $member (@members){
-                    Foswiki::Func::addUserToGroup($member, $group, 1);
+                    if(!_userExists($member)){
+                        if($addUsersToProvider ne 'topic' ){
+                            $failedToAddUser = 1;
+                            Foswiki::Func::writeWarning('Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.');
+                            next;
+                        }
+                        _createUser($member);
+                    }
+                    if(!Foswiki::Func::isGroupMember($group, $member)){
+                        _printDebug("Add User $member to $group\n");
+                        Foswiki::Func::addUserToGroup($member, $group, 1);
+                    }
                 }
             }
         }
@@ -699,10 +712,37 @@ sub _install {
         _writeHistory($appName, $appHistory);
     }
 
-    return {
-        success => JSON::true,
-        message => "OK"
-    };
+    if($failedToAddUser){
+        return {
+            success => 'warning',
+            message => 'Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.'
+        };
+    }else{
+        return {
+            success => JSON::true,
+            message => "OK"
+        };
+    }
+
+}
+
+sub _createUser {
+    my($member) = @_;
+    my $session = $Foswiki::Plugins::SESSION;
+    my $users = $session->{users};
+    _printDebug("Creating user with cUID=" . $users->addUser($member, $member, 'PW_'.$member, $member.'@qwiki.com') . "\n");
+}
+
+sub _userExists {
+    my ($member) = @_;
+    my $it = Foswiki::Func::eachUser();
+    while($it->hasNext()){
+        my $user = $it->next();
+        if($user eq $member){
+            return 1;
+        }
+    }
+    return 0;
 }
 
 sub _vAction {
