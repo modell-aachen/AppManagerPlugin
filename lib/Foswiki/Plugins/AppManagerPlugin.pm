@@ -669,7 +669,7 @@ sub _install {
                 eval {
                     Foswiki::Plugins::FillWebsPlugin::fill({
                         srcWeb => $baseDir,
-                        recurseSrc => 0,
+                        recurseSrc => 1,
                         targetWeb => $targetDir,
                         recurseTarget => 0,
                         skipTopics => join("|", @$ignoredTopics),
