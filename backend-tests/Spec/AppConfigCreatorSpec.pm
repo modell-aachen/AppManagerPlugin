@@ -25,9 +25,9 @@ sub getAppContribCreator {
     $mock->fake_module( 'Foswiki::Plugins::AppManagerPlugin',
         _getRootDir => sub { return '/var/www/qwikis/qwiki' }
     );
-    require Spec::Tester::AppConfigCreator;
+    require Spec::Tester::AppConfigCreatorTester;
 
-    my $creator = Spec::Tester::AppConfigCreator->new($config);
+    my $creator = Spec::Tester::AppConfigCreatorTester->new($config);
 }
 
 describe "the configCreator" => sub {

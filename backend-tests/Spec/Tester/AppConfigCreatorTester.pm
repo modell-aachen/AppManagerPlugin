@@ -1,4 +1,4 @@
-package Spec::Tester::AppConfigCreator;
+package Spec::Tester::AppConfigCreatorTester;
 use Foswiki::Plugins::AppManagerPlugin::AppConfigCreator;
 
 use strict;

@@ -10,9 +10,6 @@ use utf8;
 use Test::Spec;
 use Jasmine::Spy;
 
-# use FindBin;
-# use File::Spec;
-# use lib File::Spec->catdir($FindBin::Bin, '..', 'qdeploy', 'lib');
 
 sub getSpecs {
     my ($pattern) = @_;
