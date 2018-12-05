@@ -8,6 +8,7 @@ use warnings;
 use Foswiki::Func    ();
 use Foswiki::Meta    ();
 use Foswiki::Plugins ();
+use Foswiki::Plugins::AppManagerPlugin::AppConfigNormalizer qw( InstallConfig );
 
 # Core modules
 use Carp;
@@ -425,6 +426,8 @@ sub _isMultisiteEnabled {
 
 sub _install {
     my ($appName, $installConfig) = @_;
+
+    $installConfig = InstallConfig->normalize($installConfig);
 
     _printDebug("Starting installation for $appName...\n");
 
