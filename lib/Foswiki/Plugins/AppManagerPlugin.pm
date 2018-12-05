@@ -426,7 +426,7 @@ sub _isMultisiteEnabled {
 sub _install {
     my ($appName, $installConfig) = @_;
     my $failedToAddUser = 0;
-    my $addUsersToProvider = $Foswiki::cfg{'UnifiedAuth'}{'AddUsersToProvider'};
+    my $users = $Foswiki::Plugins::SESSION->{users};
 
     _printDebug("Starting installation for $appName...\n");
 
@@ -615,13 +615,9 @@ sub _install {
                 }
 
                 foreach my $member (@members){
-                    if(!_userExists($member)){
-                        if($addUsersToProvider ne 'topic' ){
-                            $failedToAddUser = 1;
-                            Foswiki::Func::writeWarning('Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.');
-                            next;
-                        }
-                        _createUser($member);
+                    if(!_createUserIfNotExists($member,$users)){
+                        $failedToAddUser = 1;
+                        next;
                     }
                     if(!Foswiki::Func::isGroupMember($group, $member)){
                         _printDebug("Add User $member to $group\n");
@@ -713,6 +709,7 @@ sub _install {
     }
 
     if($failedToAddUser){
+        _printDebug('Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.'."\n");
         return {
             success => 'warning',
             message => 'Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.'
@@ -726,23 +723,15 @@ sub _install {
 
 }
 
-sub _createUser {
-    my($member) = @_;
-    my $session = $Foswiki::Plugins::SESSION;
-    my $users = $session->{users};
-    _printDebug("Creating user with cUID=" . $users->addUser($member, $member, 'PW_'.$member, $member.'@qwiki.com') . "\n");
-}
-
-sub _userExists {
-    my ($member) = @_;
-    my $it = Foswiki::Func::eachUser();
-    while($it->hasNext()){
-        my $user = $it->next();
-        if($user eq $member){
-            return 1;
+sub _createUserIfNotExists {
+    my($member,$users) = @_;
+    if(!$users->userExists($member)){
+        if($Foswiki::cfg{'UnifiedAuth'}{'AddUsersToProvider'} ne 'topic' ){
+            return 0;
         }
+        _printDebug("Creating user with cUID=" . $users->addUser($member, $member, 'PW_'.$member, $member.'@qwiki.com') . "\n");
     }
-    return 0;
+    return 1;
 }
 
 sub _vAction {
