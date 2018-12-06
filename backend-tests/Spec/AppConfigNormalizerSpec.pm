@@ -93,4 +93,43 @@ describe "the appConfig normalizer" => sub {
                         }],
                 });
     };
+
+    it "converts an array as value in webpreferences as object to a comma seperated list" => sub {
+        my $installConfigs = {
+                name => 'general',
+                sitePreferences => {
+                    language => ['en', 'de'],
+                },
+            };
+
+        my $normalizedConfig = InstallConfig->normalize($installConfigs);
+
+        cmp_deeply($normalizedConfig, {
+                name => 'general',
+                sitePreferences => [{
+                        name => 'language',
+                        value => 'en,de',
+                    }],
+            });
+    };
+
+    it "converts an array as value in webpreferences as array to a comma seperated list" => sub {
+        my $installConfigs = {
+                name => 'general',
+                sitePreferences => [{
+                        name => 'language',
+                        value => ['en', 'de'],
+                }],
+            };
+
+        my $normalizedConfig = InstallConfig->normalize($installConfigs);
+
+        cmp_deeply($normalizedConfig, {
+                name => 'general',
+                sitePreferences => [{
+                        name => 'language',
+                        value => 'en,de',
+                    }],
+            });
+    };
 };
