@@ -17,7 +17,25 @@ The appconfig.json file has to define an app configuration object. The following
    * __installConfigs__: Array of installation configuration objects. The first object in the array will be considered as the default installation.
       * __name__: Name of the installation.
       * __destinationWeb__: Name of the web in which the app should be installed.
-      * _webPreferences_: An array of objects defining preferences to be set in the WebPreferences. Will be skipped when web starts with an underscore '_'.
+      * __webPreferences__:
+         * An array of objects defining preferences to be set in the WebPreferences. Will be skipped when web starts with an underscore '_'.
+         <pre>{
+   "webPreferences": [
+       {
+           "name": "WORKFLOW",
+           "value": "Settings/Processes.GlobalDocumentApprovalWorkflow"
+       }
+   ]
+}</pre>
+         * Alternative: An object with __name__ as key and string as __value__ or object with the same attributes as the array version.
+        <pre>{
+    "webPreferences": {
+        "WORKFLOW": "Settings/Processes.GlobalDocumentApprovalWorkflow",
+        "CONTENTTEMPLATEWEB": {
+            "value": "<new web>, Settings.Processes"
+        }
+    }
+ }</pre>
          * __name__: The name of the preference.
          * __value__: The value of the preference. Use =&{...}= to get the value of a setting, eg. =&{destinationWeb}= will expand to the destination web.
          * __pattern__: Regex to apply to the _current_ value (left hand of a =s/pattern/.../g= substitution); fallback to __value__ when it does not match; fallback to original value, when __value__ is not set. You can also use the =&{...}= syntax.
