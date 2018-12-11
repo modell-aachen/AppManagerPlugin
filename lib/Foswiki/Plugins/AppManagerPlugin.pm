@@ -208,12 +208,6 @@ sub _enableMultisite {
     # Set SitePreferences
     _setOnPreferences({}, [
         {
-            name => 'MODAC_HIDEWEBS',
-            pattern => qr($),
-            format => '|Settings|OUTemplate',
-            skip => '\|Settings\|OUTemplate\b',
-        },
-        {
             name => 'SKIN',
             pattern => qr((\bcustom\s*,|^(?!\bcustom\s*,))), # matches 'custom,' if it exists, start anchor otherwise
             format => '$1multisite,',
