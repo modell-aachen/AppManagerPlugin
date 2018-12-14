@@ -208,12 +208,6 @@ sub _enableMultisite {
     # Set SitePreferences
     _setOnPreferences({}, [
         {
-            name => 'MODAC_HIDEWEBS',
-            pattern => qr($),
-            format => '|Settings|OUTemplate',
-            skip => '\|Settings\|OUTemplate\b',
-        },
-        {
             name => 'SKIN',
             pattern => qr((\bcustom\s*,|^(?!\bcustom\s*,))), # matches 'custom,' if it exists, start anchor otherwise
             format => '$1multisite,',
@@ -425,6 +419,8 @@ sub _isMultisiteEnabled {
 
 sub _install {
     my ($appName, $installConfig) = @_;
+    my $failedToAddUser = 0;
+    my $users = $Foswiki::Plugins::SESSION->{users};
 
     _printDebug("Starting installation for $appName...\n");
 
@@ -613,7 +609,14 @@ sub _install {
                 }
 
                 foreach my $member (@members){
-                    Foswiki::Func::addUserToGroup($member, $group, 1);
+                    if(!_createUserIfNotExists($member,$users)){
+                        $failedToAddUser = 1;
+                        next;
+                    }
+                    if(!Foswiki::Func::isGroupMember($group, $member)){
+                        _printDebug("Add User $member to $group\n");
+                        Foswiki::Func::addUserToGroup($member, $group, 1);
+                    }
                 }
             }
         }
@@ -656,7 +659,7 @@ sub _install {
                 eval {
                     Foswiki::Plugins::FillWebsPlugin::fill({
                         srcWeb => $baseDir,
-                        recurseSrc => 0,
+                        recurseSrc => 1,
                         targetWeb => $targetDir,
                         recurseTarget => 0,
                         skipTopics => join("|", @$ignoredTopics),
@@ -699,10 +702,30 @@ sub _install {
         _writeHistory($appName, $appHistory);
     }
 
-    return {
-        success => JSON::true,
-        message => "OK"
-    };
+    if($failedToAddUser){
+        _printDebug('Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.'."\n");
+        return {
+            success => 'warning',
+            message => 'Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.'
+        };
+    }else{
+        return {
+            success => JSON::true,
+            message => "OK"
+        };
+    }
+
+}
+
+sub _createUserIfNotExists {
+    my($member,$users) = @_;
+    if(!$users->userExists($member)){
+        if($Foswiki::cfg{'UnifiedAuth'}{'AddUsersToProvider'} ne 'topic' ){
+            return 0;
+        }
+        _printDebug("Creating user with cUID=" . $users->addUser($member, $member, 'PW_'.$member, $member.'@qwiki.com') . "\n");
+    }
+    return 1;
 }
 
 sub _vAction {

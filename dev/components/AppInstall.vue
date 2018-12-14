@@ -102,7 +102,9 @@ export default {
             requestData)
             .done( function(result) {
                 result = JSON.parse(result);
-                if(result.success) {
+                if(result.success==="warning"){
+                    swal("Installation Warning!",result.message,"warning");
+                }else if(result.success) {
                     let message = "App installed as ";
                     if(config.subConfigs) {
                          for (let i = 0; i < config.subConfigs.length; i++) {
