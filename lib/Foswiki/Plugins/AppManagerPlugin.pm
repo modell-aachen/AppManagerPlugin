@@ -8,6 +8,7 @@ use warnings;
 use Foswiki::Func    ();
 use Foswiki::Meta    ();
 use Foswiki::Plugins ();
+use Foswiki::Plugins::AppManagerPlugin::AppConfigNormalizer qw( InstallConfig );
 
 # Core modules
 use Carp;
@@ -421,6 +422,8 @@ sub _install {
     my ($appName, $installConfig) = @_;
     my $failedToAddUser = 0;
     my $users = $Foswiki::Plugins::SESSION->{users};
+
+    $installConfig = InstallConfig->normalize($installConfig);
 
     _printDebug("Starting installation for $appName...\n");
 
