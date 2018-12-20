@@ -12,33 +12,21 @@ sub InstallConfig () { __PACKAGE__ };
 sub normalize {
     my ( $class, $config ) = @_;
 
-    my $normalizedConfig = $class->_normalizeSingleConfig($config);
-    $normalizedConfig = $class->_normalizeSubConfigOf($normalizedConfig);
-
-
-    return $normalizedConfig;
-}
-
-sub _normalizeSingleConfig {
-    my ( $class, $config ) = @_;
-    foreach my $preferences ( qw( webPreferences sitePreferences ) ) {
-        if (_isObject($config->{$preferences})) {
-            $config->{$preferences} = $class->_objectToArray( $config->{$preferences} );
-        }
-    }
+    $class->_normalizeSingleConfigIn($config);
+    $class->_normalizeSubConfigIn($config);
 
     return $config;
 }
 
-sub _normalizeSubConfigOf {
+sub _normalizeSingleConfigIn {
     my ( $class, $config ) = @_;
-    my $subConfigs = $config->{subConfigs};
-    my @normalizedSubConfigs = ();
-    if (defined $subConfigs) {
-        foreach my $subConfig (@{$subConfigs}) {
-            push @normalizedSubConfigs, InstallConfig->normalize($subConfig);
+    foreach my $preferences ( qw( webPreferences sitePreferences ) ) {
+        if (_isObject($config->{$preferences})) {
+            $config->{$preferences} = $class->_objectToArray($config->{$preferences});
         }
-        $config->{subConfigs} = \@normalizedSubConfigs;
+        if (exists $config->{$preferences}) {
+            $class->_normalizeValueInAll($config->{$preferences});
+        }
     }
 
     return $config;
@@ -60,7 +48,38 @@ sub _objectToArray {
     return $array;
 }
 
+sub _normalizeValueInAll {
+    my ( $class, $preferences ) = @_;
+    foreach my $preference (@{$preferences}) {
+        $class->_normalizeValueInSingle($preference);
+    }
+}
+
+sub _normalizeValueInSingle {
+    my ( $class, $preference ) = @_;
+    if (_isArray($preference->{value})) {
+        $preference->{value} = join ',', @{$preference->{value}};
+    }
+}
+
+sub _normalizeSubConfigIn {
+    my ( $class, $config ) = @_;
+    my $subConfigs = $config->{subConfigs};
+    my @normalizedSubConfigs = ();
+    if (defined $subConfigs) {
+        foreach my $subConfig (@{$subConfigs}) {
+            push @normalizedSubConfigs, InstallConfig->normalize($subConfig);
+        }
+        $config->{subConfigs} = \@normalizedSubConfigs;
+    }
+}
+
 sub _isObject {
     my ( $variable ) = @_;
     return (ref($variable) eq 'HASH');
+}
+
+sub _isArray {
+    my ( $variable ) = @_;
+    return (ref($variable) eq 'ARRAY');
 }
