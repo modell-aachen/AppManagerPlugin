@@ -5,14 +5,6 @@ pipeline:
     image: quay.io/modellaachen/perl-test:latest
     commands:
       - perl -I "$PWD/backend-tests" -I "$PWD/lib" backend-tests/test.pl
-  sonar:
-    image: newtmitch/sonar-scanner
-    commands:
-      - echo $PWD
-      - sonar-scanner -Dsonar.host.url=$${SONAR_HOST} -Dsonar.login=$${SONAR_LOGIN}
-    secrets: [SONAR_HOST, SONAR_LOGIN]
-    when:
-      event: push
   notify:
     image: drillster/drone-email
     host: smtp.sendgrid.net
