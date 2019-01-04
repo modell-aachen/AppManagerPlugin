@@ -412,9 +412,8 @@ sub _isMultisiteAvailable {
 }
 
 sub _isMultisiteEnabled {
-    my ($sitePrefWeb, $sitePrefTopic) = Foswiki::Func::normalizeWebTopicName('', $Foswiki::cfg{'LocalSitePreferences'});
-    my ($mainMeta, $mainText) = Foswiki::Func::readTopic($sitePrefWeb, $sitePrefTopic);
-    return ($mainText =~ /\|Settings\|OUTemplate/);
+    my $history = _readHistory('MultisiteAppContrib');
+    return exists $history->{installed} && exists $history->{installed}->{Settings};
 }
 
 sub _install {
