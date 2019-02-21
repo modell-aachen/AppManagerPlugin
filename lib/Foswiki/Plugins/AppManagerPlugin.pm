@@ -741,7 +741,7 @@ sub _userToUserHash {
     my ($user) = @_;
     my %userObject;
     if(ref($user) ne "HASH") {
-        %userObject->{name} = $user;
+        $userObject{name} = $user;
         return \%userObject;
     }
     return $user;
