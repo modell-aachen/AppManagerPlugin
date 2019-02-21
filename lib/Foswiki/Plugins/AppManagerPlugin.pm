@@ -611,13 +611,14 @@ sub _install {
                 }
 
                 foreach my $member (@members){
+                    $member = _userToUserHash($member);
                     if(!_createUserIfNotExists($member,$users)){
                         $failedToAddUser = 1;
                         next;
                     }
-                    if(!Foswiki::Func::isGroupMember($group, $member)){
-                        _printDebug("Add User $member to $group\n");
-                        Foswiki::Func::addUserToGroup($member, $group, 1);
+                    if(!Foswiki::Func::isGroupMember($group, $member->{name})){
+                        _printDebug("Add User $member->{name} to $group\n");
+                        Foswiki::Func::addUserToGroup($member->{name}, $group, 1);
                     }
                 }
             }
@@ -721,13 +722,29 @@ sub _install {
 
 sub _createUserIfNotExists {
     my($member,$users) = @_;
-    if(!$users->userExists($member)){
+    my $name = $member->{name};
+    my $cuid = $member->{cuid};
+    if(!$users->userExists($name)){
         if($Foswiki::cfg{'UnifiedAuth'}{'AddUsersToProvider'} ne 'topic' ){
             return 0;
         }
-        _printDebug("Creating user with cUID=" . $users->addUser($member, $member, 'PW_'.$member, $member.'@qwiki.com') . "\n");
+        if(!$cuid) {
+            _printDebug("Creating user with cUID=" . $users->addUser($name, $name, 'PW_'.$name, $name.'@qwiki.com') . "\n");
+        } else {
+            _printDebug("Creating user with cUID=" . $users->{mapping}->addUserWithCuid($name, $name, 'PW_'.$name, $name.'@qwiki.com', $cuid) . "\n");
+        }
     }
     return 1;
+}
+
+sub _userToUserHash {
+    my ($user) = @_;
+    my %userObject;
+    if(ref($user) ne "HASH") {
+        %userObject->{name} = $user;
+        return \%userObject;
+    }
+    return $user;
 }
 
 sub _vAction {
