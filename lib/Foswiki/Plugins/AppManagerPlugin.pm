@@ -188,7 +188,7 @@ sub _getRootDir {
 }
 
 sub _enableMultisite {
-    if(_isMultisiteEnabled()){
+    if(isMultisiteEnabled()){
         _printDebug("Multisite is already enabled.\n");
         return {
             success => JSON::false,
@@ -370,7 +370,7 @@ sub _setOnPreferencesText {
 }
 
 sub _disableMultisite {
-    unless(_isMultisiteEnabled()){
+    unless(isMultisiteEnabled()){
         _printDebug("Multisite is already disabled\n");
         return {
             success => JSON::false,
@@ -412,7 +412,7 @@ sub _isMultisiteAvailable {
     return Foswiki::Func::topicExists($systemWebName, "MultisiteWebLeftBarDefault");
 }
 
-sub _isMultisiteEnabled {
+sub isMultisiteEnabled {
     my $history = _readHistory('MultisiteAppContrib');
     return exists $history->{installed} && exists $history->{installed}->{Settings};
 }
@@ -839,11 +839,11 @@ sub _RESTapplist {
         $response->body(encode_json(_texterror('Only Admins are allowed to list installed applications.')));
         return '';
     }
-    my $isMultisite = _isMultisiteEnabled();
+    my $isMultisite = isMultisiteEnabled();
     $response->body(encode_json({
         "apps" => _applist(),
         "multisite" => {
-            "enabled" => _isMultisiteEnabled() ? JSON::true : JSON::false,
+            "enabled" => isMultisiteEnabled() ? JSON::true : JSON::false,
             "available" => _isMultisiteAvailable() ? JSON::true : JSON::false
         }
     }));
