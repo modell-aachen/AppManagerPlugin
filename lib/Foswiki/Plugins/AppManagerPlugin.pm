@@ -426,6 +426,9 @@ sub _install {
 
     _printDebug("Starting installation for $appName...\n");
 
+    my $context = Foswiki::Func::getContext();
+    local $context->{'IgnoreKVPPermission'} = 1;
+
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
 
     my @configs;
