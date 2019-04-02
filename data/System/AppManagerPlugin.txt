@@ -17,9 +17,27 @@ The appconfig.json file has to define an app configuration object. The following
    * __installConfigs__: Array of installation configuration objects. The first object in the array will be considered as the default installation.
       * __name__: Name of the installation.
       * __destinationWeb__: Name of the web in which the app should be installed.
-      * _webPreferences_: An array of objects defining preferences to be set in the WebPreferences. Will be skipped when web starts with an underscore '_'.
+      * __webPreferences__:
+         * An array of objects defining preferences to be set in the WebPreferences. Will be skipped when web starts with an underscore '_'.
+         <pre>{
+   "webPreferences": [
+       {
+           "name": "WORKFLOW",
+           "value": "Settings/Processes.GlobalDocumentApprovalWorkflow"
+       }
+   ]
+}</pre>
+         * Alternative: An object with __name__ as key and string as __value__ or object with the same attributes as the array version.
+        <pre>{
+    "webPreferences": {
+        "WORKFLOW": "Settings/Processes.GlobalDocumentApprovalWorkflow",
+        "CONTENTTEMPLATEWEB": {
+            "value": "<new web>, Settings.Processes"
+        }
+    }
+ }</pre>
          * __name__: The name of the preference.
-         * __value__: The value of the preference. Use =&{...}= to get the value of a setting, eg. =&{destinationWeb}= will expand to the destination web.
+         * __value__: The value of the preference. Use =&{...}= to get the value of a setting, eg. =&{destinationWeb}= will expand to the destination web. The __value__ may be an array of strings as well and will be converted into a comma seperated string list.
          * __pattern__: Regex to apply to the _current_ value (left hand of a =s/pattern/.../g= substitution); fallback to __value__ when it does not match; fallback to original value, when __value__ is not set. You can also use the =&{...}= syntax.
          * __format__: Format to apply to the regex result (right hand of a =s/.../format/g= substitution). You can also use the =&{...}= syntax.
          * __remove__: Remove this setting, when perl-true.
@@ -40,6 +58,7 @@ The appconfig.json file has to define an app configuration object. The following
          * __formName__: The name of the form to be generated.
          * __formGroup__: The name of the form group. Appropriate FormGenerators need to be installed in advance.
       * _groups_: An object describing which groups to create and members to add. E.g.: _{ GreatGroup: ["AdminUser"] }_. Use an empty array to create an empty group (if it does not already exist). If you add non-existing members they will be created if the topic provider is configured.
+         * __user__: Can be a String or an Object with name and cuid. (E.g.: _{"name": "KalleKeyUser", "cuid": "..."}_)
       * _appContent_: Either an array of app content configurations or a single app content configuration object.
          * __baseDir__: The web from which content needs to be copied or linked.
          * __targetDir__: The web to which content should be copied. If not set it defaults to the destinationWeb.
@@ -146,7 +165,7 @@ The appconfig.json file has to define an app configuration object. The following
                         },
                         {
                             "name": "GLOSSARY",
-                            "value": "GlossaryDE, GlossaryEN, <this web>.Glossary"
+                            "value": ["GlossaryDE", "GlossaryEN", "<this web>.Glossary"]
                         }
                     ],
                     "appContent": [

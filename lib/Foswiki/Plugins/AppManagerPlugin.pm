@@ -8,6 +8,7 @@ use warnings;
 use Foswiki::Func    ();
 use Foswiki::Meta    ();
 use Foswiki::Plugins ();
+use Foswiki::Plugins::AppManagerPlugin::AppConfigNormalizer qw( InstallConfig );
 
 # Core modules
 use Carp;
@@ -187,7 +188,7 @@ sub _getRootDir {
 }
 
 sub _enableMultisite {
-    if(_isMultisiteEnabled()){
+    if(isMultisiteEnabled()){
         _printDebug("Multisite is already enabled.\n");
         return {
             success => JSON::false,
@@ -369,7 +370,7 @@ sub _setOnPreferencesText {
 }
 
 sub _disableMultisite {
-    unless(_isMultisiteEnabled()){
+    unless(isMultisiteEnabled()){
         _printDebug("Multisite is already disabled\n");
         return {
             success => JSON::false,
@@ -411,7 +412,7 @@ sub _isMultisiteAvailable {
     return Foswiki::Func::topicExists($systemWebName, "MultisiteWebLeftBarDefault");
 }
 
-sub _isMultisiteEnabled {
+sub isMultisiteEnabled {
     my $history = _readHistory('MultisiteAppContrib');
     return exists $history->{installed} && exists $history->{installed}->{Settings};
 }
@@ -421,7 +422,12 @@ sub _install {
     my $failedToAddUser = 0;
     my $users = $Foswiki::Plugins::SESSION->{users};
 
+    $installConfig = InstallConfig->normalize($installConfig);
+
     _printDebug("Starting installation for $appName...\n");
+
+    my $context = Foswiki::Func::getContext();
+    local $context->{'IgnoreKVPPermission'} = 1;
 
     my $systemWebName = $Foswiki::cfg{'SystemWebName'} || 'System';
 
@@ -608,13 +614,14 @@ sub _install {
                 }
 
                 foreach my $member (@members){
+                    $member = _userToUserHash($member);
                     if(!_createUserIfNotExists($member,$users)){
                         $failedToAddUser = 1;
                         next;
                     }
-                    if(!Foswiki::Func::isGroupMember($group, $member)){
-                        _printDebug("Add User $member to $group\n");
-                        Foswiki::Func::addUserToGroup($member, $group, 1);
+                    if(!Foswiki::Func::isGroupMember($group, $member->{name})){
+                        _printDebug("Add User $member->{name} to $group\n");
+                        Foswiki::Func::addUserToGroup($member->{name}, $group, 1);
                     }
                 }
             }
@@ -718,13 +725,29 @@ sub _install {
 
 sub _createUserIfNotExists {
     my($member,$users) = @_;
-    if(!$users->userExists($member)){
+    my $name = $member->{name};
+    my $cuid = $member->{cuid};
+    if(!$users->userExists($name)){
         if($Foswiki::cfg{'UnifiedAuth'}{'AddUsersToProvider'} ne 'topic' ){
             return 0;
         }
-        _printDebug("Creating user with cUID=" . $users->addUser($member, $member, 'PW_'.$member, $member.'@qwiki.com') . "\n");
+        if(!$cuid) {
+            _printDebug("Creating user with cUID=" . $users->addUser($name, $name, 'PW_'.$name, $name.'@qwiki.com') . "\n");
+        } else {
+            _printDebug("Creating user with cUID=" . $users->{mapping}->addUserWithCuid($name, $name, 'PW_'.$name, $name.'@qwiki.com', $cuid) . "\n");
+        }
     }
     return 1;
+}
+
+sub _userToUserHash {
+    my ($user) = @_;
+    my %userObject;
+    if(ref($user) ne "HASH") {
+        $userObject{name} = $user;
+        return \%userObject;
+    }
+    return $user;
 }
 
 sub _vAction {
@@ -819,11 +842,11 @@ sub _RESTapplist {
         $response->body(encode_json(_texterror('Only Admins are allowed to list installed applications.')));
         return '';
     }
-    my $isMultisite = _isMultisiteEnabled();
+    my $isMultisite = isMultisiteEnabled();
     $response->body(encode_json({
         "apps" => _applist(),
         "multisite" => {
-            "enabled" => _isMultisiteEnabled() ? JSON::true : JSON::false,
+            "enabled" => isMultisiteEnabled() ? JSON::true : JSON::false,
             "available" => _isMultisiteAvailable() ? JSON::true : JSON::false
         }
     }));
