@@ -82,7 +82,7 @@ export default {
 };
 </script>
 
-<style lang="sass">
+<style lang="scss">
 .flatskin-wrapped .ma-table {
     .right {
         text-align: right;

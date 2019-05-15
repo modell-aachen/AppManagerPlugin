@@ -117,7 +117,7 @@ export default {
 };
 </script>
 
-<style lang="sass">
+<style lang="scss">
 .sweet-alert {
     h2 {
         border-style: none;
