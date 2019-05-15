@@ -1,5 +1,5 @@
 {
-  "name": "AppManager",
+  "name": "appmanager",
   "version": "1.0.0",
   "description": "AppManager UI",
   "main": "pub/System/AppManager/appmanager.js",
@@ -7,7 +7,7 @@
     "postinstall": "yarn build",
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
-    "lint": "vue-cli-service lint dev frontend-tests"
+    "lint": "vue-cli-service lint dev"
   },
   "repository": {
     "type": "git",
