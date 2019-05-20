@@ -132,7 +132,7 @@ export default {
             set: function(input) {
                 if(!this.invalidJson) {
                     this.localConfig.destinationWeb = input;
-                    this.configJson = JSON.stringify(this.localConfig, null, '    ');
+                    this.configJson = JSON.stringify(this.localConfig, null, 4);
                 }
             },
         },
@@ -141,7 +141,7 @@ export default {
         },
     },
     created: function() {
-        this.configJson = JSON.stringify(this.config, null, '    ');
+        this.configJson = JSON.stringify(this.config, null, 4);
         this.localConfig = $.extend({}, this.config);
         this.ready = true;
         this.$watch('config', function() {
@@ -153,7 +153,7 @@ export default {
     },
     methods: {
         abort: function () {
-            this.configJson = JSON.stringify(this.config, null, '    ');
+            this.configJson = JSON.stringify(this.config, null, 4);
             this.localConfig = this.config;
             this.expert = false;
             this.invalidJson = false;
@@ -189,9 +189,7 @@ export default {
                         }else{
                             message += config.destinationWeb + '.';
                         }
-                        swal('Installation Completed!',
-                            message,
-                            'success');
+                        swal('Installation Completed!', message, 'success');
                         $.get(foswiki.getScriptUrl('rest', 'FormGeneratorPlugin', 'index'), { mode: 'nosolr' });
                     } else {
                         swal('Installation Failed!', result.message, 'error');
