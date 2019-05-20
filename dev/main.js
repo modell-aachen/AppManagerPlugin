@@ -1,9 +1,9 @@
 /* global $ Vue */
 import AppList from './components/AppList.vue';
 
-$( function () {
+$(function () {
     Vue.instantiateEach(
         '.AppManagerContainer',
-         { components: { appList: AppList } }
+        { components: { appList: AppList } }
     );
 });
