@@ -10,3 +10,5 @@ lib/Foswiki/Plugins/AppManagerPlugin/AppManagerException.pm 0444
 lib/Foswiki/Plugins/AppManagerPlugin/AppConfigNormalizer.pm 0444
 tools/appmanager 0755
 pub/System/AppManagerPlugin/appmanager.js 0444
+pub/System/AppManagerPlugin/appmanager.js.map 0444
+pub/System/AppManagerPlugin/appmanager.js.gz 0444
