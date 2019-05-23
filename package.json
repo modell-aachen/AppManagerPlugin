@@ -16,11 +16,15 @@
   "author": "Modell Aachen GmbH",
   "license": "GPL-3.0",
   "devDependencies": {
+    "@modac/eslint-config": "^0.1.2",
+    "@modac/jest-config": "^0.1.0",
+    "@modac/tsconfig": "^0.1.0",
     "@vue/cli-plugin-babel": "^3.7.0",
     "@vue/cli-plugin-eslint": "^3.7.0",
     "@vue/cli-plugin-unit-jest": "^3.7.0",
     "@vue/cli-service": "^3.7.0",
     "@vue/eslint-config-standard": "^4.0.0",
+    "@vue/eslint-config-typescript": "^4.0.0",
     "babel-core": "^6.3.17",
     "babel-eslint": "^10.0.1",
     "babel-jest": "^24.1.0",
@@ -30,6 +34,8 @@
     "node-sass": "^4.5.0",
     "nprogress": "^0.2.0",
     "sass-loader": "^7.1.0",
+    "ts-jest": "^24.0.2",
+    "typescript": "^3.4.5",
     "vue-template-compiler": "^2.2.4"
   }
 }
