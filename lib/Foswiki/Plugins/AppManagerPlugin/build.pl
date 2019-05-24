@@ -22,7 +22,11 @@ sub _installDeps {
   my $this = shift;
 
   local $| = 1;
-  print $this->sys_action( qw(npm install) );
+  print $this->sys_action( qw(yarn) );
+  print $this->sys_action( qw(yarn build) );
+  # note: on error BuildContrib will swallow up STDOUT, so we wouldn't see which tests failed
+  print $this->sys_action( qw(yarn lint 1>&2) );
+  # print $this->sys_action( qw(yarn test:unit 1>&2) );
 }
 
 my $build = AppManagerBuild->new();
