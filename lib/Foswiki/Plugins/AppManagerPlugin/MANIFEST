@@ -1,6 +1,7 @@
 !noci
 data/System/AppManagerPlugin.txt 0644
 data/System/AppManager.txt 0644
+data/System/AppManagerViewTemplate.txt 0644
 data/System/AppManagerDefaultWebPreferences.txt 0644
 data/System/AppManagerDefaultWebStatisticsTemplate.txt 0644
 lib/Foswiki/Plugins/AppManagerPlugin.pm 0444

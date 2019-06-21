@@ -1,0 +1,19 @@
+%TMPL:INCLUDE{"view"}%
+
+%TMPL:DEF{"content"}%
+%VUE{VERSION="2"}%
+%JQREQUIRE{"blockui,jqp::underscore,wikiword,jqp::sweetalert2"}%
+%ADDTOZONE{
+  "script"
+  id="FOUNDATION::SCRIPTS"
+  requires="JQUERYPLUGIN::FOSWIKI::PREFERENCES"
+  text="<script type='text/javascript' src='%PUBURLPATH%/System/FlatSkin/js/foundation.js'></script>"
+}%
+%ADDTOZONE{
+  "head"
+  id="FLATSKIN::STYLES"
+  text="<link rel='stylesheet' href='%PUBURLPATH%/System/FlatSkin/css/flatskin_wrapped.min.css' />"
+}%
+
+%APPMANAGER%
+%TMPL:END%
