@@ -419,7 +419,7 @@ sub isMultisiteEnabled {
 
 sub _install {
     my ($appName, $installConfig) = @_;
-    my $failedToAddUser = 0;
+    my $hasFailedToAddUser = 0;
     my $users = $Foswiki::Plugins::SESSION->{users};
 
     $installConfig = InstallConfig->normalize($installConfig);
@@ -442,7 +442,7 @@ sub _install {
     foreach my $subConfig (@configs){
 
         if($subConfig->{groups}){
-            $failedToAddUser = _processGroups($subConfig->{groups}, $users) ? 1 : $failedToAddUser;
+            $hasFailedToAddUser = _createGroupsAndUsers($subConfig->{groups}, $users) ? 1 : $hasFailedToAddUser;
         }
 
         _printDebug("Creating web(s)...\n");
@@ -685,7 +685,7 @@ sub _install {
         _writeHistory($appName, $appHistory);
     }
 
-    if($failedToAddUser){
+    if($hasFailedToAddUser){
         _printDebug('Failed to add user: adding users is not supported, please configure {UnifiedAuth}{AddUsersToProvider}.'."\n");
         return {
             success => 'warning',
@@ -700,11 +700,11 @@ sub _install {
 
 }
 
-sub _processGroups {
+sub _createGroupsAndUsers {
     _printDebug("Processing groups...\n");
     my ($groups, $users) = @_;
     my @groupNames = keys(%{$groups});
-    my $failedToAddUser = 0;
+    my $hasFailedToAddUser = 0;
 
     foreach my $group (@groupNames){
         unless($group =~ /Group$/){
@@ -724,7 +724,7 @@ sub _processGroups {
         foreach my $member (@members){
             $member = _userToUserHash($member);
             if(!_createUserIfNotExists($member,$users)){
-                $failedToAddUser = 1;
+                $hasFailedToAddUser = 1;
                 next;
             }
             if(!Foswiki::Func::isGroupMember($group, $member->{name})){
@@ -734,7 +734,7 @@ sub _processGroups {
         }
     }
 
-    return $failedToAddUser;
+    return $hasFailedToAddUser;
 
 }
 
