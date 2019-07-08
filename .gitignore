@@ -1,5 +1,5 @@
 node_modules/
-pub/System/AppManagerPlugin/appmanager.js
-pub/System/AppManagerPlugin/appmanager.js.map
+pub/System/AppManagerPlugin/appmanager.*
 *.swo
 tags
+*.log
