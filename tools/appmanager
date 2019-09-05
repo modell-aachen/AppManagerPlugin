@@ -1,82 +1,108 @@
 #!/usr/bin/perl
+
 use strict;
 use warnings;
+use utf8;
 
-use Data::Dumper;
+BEGIN {
+  if (-e './setlib.cfg') {
+    unshift @INC, '.';
+  } elsif (-e '../bin/setlib.cfg') {
+    unshift @INC, '../bin';
+  }
+  require 'setlib.cfg';
+}
+
+use Pod::Usage;
+use Getopt::Long;
+
+use Foswiki ();
+use Foswiki::Contrib::VirtualHostingContrib::VirtualHost qw( VirtualHost );
+
+sub main {
+
+    my $subCommand;
+    my %cfg = (
+        help => 0,
+        hostnames => [],
+        subCommand => undef,
+        subCommandArgs => [],
+    );
+
+    GetOptions(
+        'help|h' => \$cfg{help},
+        'host=s@' => \$cfg{hostnames},
+        '<>' => sub {
+            my( $arg ) = @_;
+            if ($arg =~ m{^-}) {
+                pod2usage(
+                    -msg => "Usage error: Unknown option $arg.\n",
+                    -exitval => 2,
+                );
+            } elsif(not defined $cfg{subCommand}) {
+                $cfg{subCommand} = $arg;
+            } else {
+                push @{$cfg{subCommandArgs}}, $arg;
+            }
+        }
+    );
+    pod2usage(1) if $cfg{help};
+
+    if (!@{$cfg{hostnames}}) {
+        pod2usage(
+            -msg => "Usage error: mandatory host parameter was not set.\n",
+            -exitval => 2,
+        );
+    } elsif (not defined $cfg{subCommand}) {
+        pod2usage(
+            -msg => "Usage error: no subCommand was given\n",
+            -exitval => 2,
+        );
+    }
+
+    VirtualHost->run_on_each(sub {
+            new Foswiki('admin');
+            AppManagerCli::processSubCommand($cfg{subCommand}, $cfg{subCommandArgs});
+        }, $cfg{hostnames});
+}
+
+exit main( \@ARGV ) if !caller(0);
+
+
+package AppManagerCli;
+
+use Pod::Usage;
 use Try::Tiny;
 use Scalar::Util qw( blessed );
-do '../bin/setlib.cfg';
-require Foswiki;
-Foswiki->new('admin');
 
-require Foswiki::Plugins::AppManagerPlugin;
-require Foswiki::Plugins::AppManagerPlugin::AppConfigCreator;
+use Foswiki::Plugins::AppManagerPlugin;
+use Foswiki::Plugins::AppManagerPlugin::AppConfigCreator qw( AppConfigCreator );
 
-if(@ARGV < 1){
-    printHelp();
-    exit;
-}
+sub processSubCommand {
+    my ( $subCommand, $args ) = @_;
 
-my $command = $ARGV[0];
-
-if($command eq 'install'){
-    install();
-    exit;
-}
-elsif($command eq 'list'){
-    list();
-    exit;
-}
-elsif($command eq 'uninstall'){
-    uninstall();
-    exit;
-}
-elsif($command eq 'multisite'){
-    multisite();
-    exit;
-}
-elsif($command eq 'create') {
-    create($ARGV[1]);
-}
-else{
-    print "Unknown command!\n";
-    printHelp();
-    exit;
-}
-
-sub printHelp{
-    print "Usage: appmanager <command> [params...]\n";
-    print "\n";
-    print "Available commands:\n";
-    print "list\n";
-    print "\tPrints a list of all apps that can be installed via AppManager.\n";
-    print "\tIt additionally prints a list of all webs where apps have been installe via AppManager.\n";
-    print "\tExamples:\n";
-    print "\t\tappmanager list\n";
-    print "install\n";
-    print "\tInstalls an app given the app name and the install config name as params.\n";
-    print "\tIf no install config is specified then the first defined install config in the appconfig is used (default install).\n";
-    print "\tIf 'all' is used as install config parameter then all available apps are installed with the default installation.\n";
-    print "\tExamples:\n";
-    print "\t\tappmanager install MinutesAppContrib\n";
-    print "\t\tappmanager install MinutesAppContrib Multisite\n";
-    print "\t\tappmanager install all\n";
-    print "uninstall\n";
-    print "\tUninstalls an app given the app name and the web name of the destination web used for installation.\n";
-    print "\tExamples:\n";
-    print "\t\tappmanager uninstall MinutesAppContrib Minutes\n";
-    print "multisite\n";
-    print "\tUsed to automatically set/reset general settings for multisite Wikis (e.g. SitePreferences).\n";
-    print "\tExamples:\n";
-    print "\t\tappmanager multisite enable\n";
-    print "\t\tappmanager multisite disable\n";
-    return;
+    if($subCommand eq 'install'){
+        install(@$args);
+    } elsif($subCommand eq 'list'){
+        list(@$args);
+    } elsif($subCommand eq 'uninstall'){
+        uninstall(@$args);
+    } elsif($subCommand eq 'multisite'){
+        multisite(@$args);
+    } elsif($subCommand eq 'create') {
+        create(@$args);
+    } else{
+        pod2usage(
+            -msg => "Unknown command '$subCommand'!\n",
+            -exitval => 2,
+        );
+    }
 }
 
 sub create {
     my ( $jsonConfig ) = @_;
     try {
-        my $creator = Foswiki::Plugins::AppManagerPlugin::AppConfigCreator->new($jsonConfig);
+        my $creator = AppConfigCreator->new($jsonConfig);
         $creator->run();
     } catch {
         if ((blessed $_) && $_->isa('Foswiki::Plugins::AppManagerPlugin::AppManagerException')) {
@@ -89,21 +115,17 @@ sub create {
 }
 
 sub multisite {
-    my $operation = $ARGV[1];
+    my ( $operation ) = @_;
 
-    if($operation eq "enable"){
+    if($operation eq "enable") {
         Foswiki::Plugins::AppManagerPlugin::_enableMultisite();
-        exit;
-    }
-    elsif($operation eq "disable"){
+    } elsif($operation eq "disable") {
         Foswiki::Plugins::AppManagerPlugin::_disableMultisite();
-        exit;
     }
 }
 
 sub install{
-    my $appName = $ARGV[1];
-    my $installName = $ARGV[2];
+    my ( $appName, $installName ) = @_;
 
     unless($appName){
         print "For installation please specify the app name\n";
@@ -148,7 +170,7 @@ sub install{
     my $installResult = Foswiki::Plugins::AppManagerPlugin::_install($appName, $configToUse);
     if($installResult->{success} eq "false"){
         print "Installation failed: ";
-        print $installResult->{message}."\n";
+        print "$installResult->{message}\n";
     }
     else{
         print "Installation finished\n";
@@ -160,7 +182,7 @@ sub list{
     my $appList = Foswiki::Plugins::AppManagerPlugin::_applist();
     print "Apps managed by the AppManager:\n";
     foreach my $app (@$appList){
-        print "\t".$app->{name}."\n";
+        print "\t$app->{name}\n";
         my $history = Foswiki::Plugins::AppManagerPlugin::_readHistory($app->{name});
         if($history->{installed} && ref($history->{installed}) eq "HASH" && %{$history->{installed}}){
             print "\t\tInstalled in: ";
@@ -170,12 +192,10 @@ sub list{
             print "\t\tNot installed\n";
         }
     }
-    exit;
 }
 
 sub uninstall{
-    my $appName = $ARGV[1];
-    my $webName = $ARGV[2];
+    my ( $appName, $webName ) = @_;
 
     unless($appName && $webName) {
         print "For uninstallation please specify the app name and the web name\n";
@@ -183,5 +203,48 @@ sub uninstall{
     }
 
     Foswiki::Plugins::AppManagerPlugin::_uninstall($appName, $webName);
-    exit;
 }
+
+__END__
+
+
+=head1 NAME
+
+AppManager - installs Q.wiki Apps to host
+
+=head1 SYNOPSIS
+
+appmanager <command> [params...]
+
+  Available commands:
+    list
+      Prints a list of all apps that can be installed via AppManager.
+      It additionally prints a list of all webs where apps have been installed
+      via AppManager.
+      Examples:
+          appmanager list
+    install
+      Installs an app given the app name and the install config name as params.
+      If no install config is specified then the first defined install config
+      in the appconfig is used (default install).
+      If 'all' is used as install config parameter then all available apps are
+      installed with the default installation.
+      Examples:
+          appmanager install MinutesAppContrib
+          appmanager install MinutesAppContrib Multisite
+          appmanager install all
+    uninstall
+      Uninstalls an app given the app name and the web name of the destination
+      web used for installation.
+      Examples:
+          appmanager uninstall MinutesAppContrib Minutes
+    multisite
+      Used to automatically set/reset general settings for multisite Wikis
+      (e.g. SitePreferences).
+      Examples:
+          appmanager multisite enable
+          appmanager multisite disable
+    create
+      Creates a AppContrib from a json
+      Example:
+          appmanager create '{"appname": "TestAppContrib"}'

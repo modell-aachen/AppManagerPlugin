@@ -937,9 +937,8 @@ sub _APPMANAGER {
         "<script type='text/javascript' src='%PUBURLPATH%/System/AppManagerPlugin/appmanager.js?v=$RELEASE'></script>","VUEJSPLUGIN,JQUERYPLUGIN"
     );
 
-    my $clientToken = Foswiki::Plugins::VueJSPlugin::getClientToken();
     return <<HTML;
-        <div class="AppManagerContainer" data-vue-client-token="$clientToken"><app-list></app-list></div>
+        <div class="AppManagerContainer"><app-list></app-list></div>
 HTML
 }
 
